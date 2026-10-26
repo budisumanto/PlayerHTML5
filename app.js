@@ -57,9 +57,27 @@ document.addEventListener('DOMContentLoaded', () => {
   let lastTapX = 0;
   let seekAnimationFrame = null;
 
-  // Track hover/focus states to prevent controls hiding
+  // Pointer tracking & gesture state
+  let lastPointerType = 'mouse';
+  let pointerDownX = 0;
+  let pointerDownY = 0;
+  let wasHiddenBeforeTap = false;
+
+  // Track hover/focus states to prevent controls hiding on desktop
   let isPointerOverControls = false;
   let isSpeedMenuOpen = false;
+
+  // --- ResizeObserver for Dynamic Controls Bar Height ---
+  if (window.ResizeObserver && controlsBar) {
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const height = entry.contentRect.height;
+        const bottomOffset = container.offsetWidth <= 520 ? 16 : 24;
+        container.style.setProperty('--controls-h', `${Math.round(height + bottomOffset)}px`);
+      }
+    });
+    ro.observe(controlsBar);
+  }
 
   // --- Utility Functions ---
   const formatTime = (seconds) => {
@@ -117,6 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const scheduleControlsHide = (delayMs = 1500) => {
     clearTimeout(controlsHideTimeout);
     if (video.paused || video.ended) return;
+    if (isSpeedMenuOpen || isScrubbing) return;
     controlsHideTimeout = setTimeout(() => {
       setControlsVisible(false);
     }, delayMs);
@@ -124,24 +143,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Play / Pause Logic ---
   const togglePlay = () => {
-    if (video.paused || video.ended) {
+    if (video.ended) {
+      video.currentTime = 0;
+      video.play().catch(err => console.log('Playback prevented:', err));
+    } else if (video.paused) {
       video.play().catch(err => console.log('Playback prevented:', err));
     } else {
       video.pause();
     }
+    updatePlayPauseState();
   };
 
+  // BUG 1 & BUG 2: Exclusive play/pause/ended state updates
   const updatePlayPauseState = () => {
-    const isPaused = video.paused;
+    if (isScrubbing) return;
+
     const isEnded = video.ended;
+    const isPaused = video.paused;
+    const isPlaying = !isPaused && !isEnded;
 
     container.classList.toggle('paused', isPaused && !isEnded);
     container.classList.toggle('ended', isEnded);
-    container.classList.toggle('is-playing', !isPaused && !isEnded);
+    container.classList.toggle('is-playing', isPlaying);
 
-    playIcons.forEach(icon => icon.classList.toggle('hidden', !isPaused && !isEnded));
-    pauseIcons.forEach(icon => icon.classList.toggle('hidden', isPaused || isEnded));
+    // Exclusive Icon Visibility
+    // 1. Ended -> Replay icon only
+    // 2. Paused -> Play icon only
+    // 3. Playing -> Pause icon only
+    playIcons.forEach(icon => icon.classList.toggle('hidden', !isPaused || isEnded));
+    pauseIcons.forEach(icon => icon.classList.toggle('hidden', !isPlaying));
     replayIcons.forEach(icon => icon.classList.toggle('hidden', !isEnded));
+
+    // Update ARIA Labels
+    let stateLabel = 'Play';
+    if (isEnded) stateLabel = 'Replay';
+    else if (isPlaying) stateLabel = 'Pause';
+
+    playPauseBtn.setAttribute('aria-label', stateLabel);
+    playPauseBtn.setAttribute('title', `${stateLabel} (Space / K)`);
+    centralPlayBtn.setAttribute('aria-label', stateLabel);
 
     if (isPaused || isEnded) {
       setControlsVisible(true);
@@ -183,9 +223,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const displayVal = isMuted ? 0 : video.volume;
     volumeSlider.value = displayVal;
 
-    // Dynamic slider progress fill
     const pct = displayVal * 100;
-    volumeSlider.style.background = `linear-gradient(to right, var(--accent-color) 0%, var(--accent-color) ${pct}%, rgba(255,255,255,0.2) ${pct}%, rgba(255,255,255,0.2) 100%)`;
+    volumeSlider.style.background = `linear-gradient(to right, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.9) ${pct}%, rgba(255,255,255,0.2) ${pct}%, rgba(255,255,255,0.2) 100%)`;
   };
 
   // --- Timeline & Progress Logic (Pointer Events) ---
@@ -224,7 +263,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     timelineTooltip.textContent = formatTime(targetTime);
 
-    // Clamp tooltip within track bounds
     const tooltipWidth = timelineTooltip.offsetWidth || 40;
     const halfWidth = tooltipWidth / 2;
     const rawX = clientX - rect.left;
@@ -234,7 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const handlePointerDownTimeline = (e) => {
-    if (e.button !== undefined && e.button !== 0) return; // Only primary button
+    if (e.button !== undefined && e.button !== 0) return;
     e.preventDefault();
     isScrubbing = true;
     wasPaused = video.paused;
@@ -288,6 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!wasPaused) {
       video.play().catch(err => console.log('Resume playback failed:', err));
     }
+    updatePlayPauseState();
   };
 
   // --- Fullscreen Logic ---
@@ -298,7 +337,6 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (container.webkitRequestFullscreen) {
         container.webkitRequestFullscreen();
       } else if (video.webkitEnterFullscreen) {
-        // iOS Safari fallback
         video.webkitEnterFullscreen();
       }
     } else {
@@ -347,7 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  const setPlaybackSpeed = (speed, persist = true) => {
+  const setPlaybackSpeed = (speed, persist = true, showToast = true) => {
     video.playbackRate = speed;
     speedBtn.textContent = speed === 1.0 ? '1x' : `${speed}x`;
 
@@ -358,35 +396,50 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     toggleSpeedMenu(false);
-    showActionFeedback(`${speed}x Speed`);
+    if (showToast) {
+      showActionFeedback(`${speed}x Speed`);
+    }
 
     if (persist) {
       localStorage.setItem(STORAGE_KEY_SPEED, speed.toString());
     }
   };
 
-  // --- Video State / Loading / Error Handling ---
-  video.addEventListener('waiting', () => {
-    loadingSpinner.classList.remove('hidden');
-  });
+  // --- Video Event Listeners (BUG 1) ---
+  const handleVideoStateChange = () => {
+    updatePlayPauseState();
+  };
 
+  video.addEventListener('play', handleVideoStateChange);
+  video.addEventListener('pause', handleVideoStateChange);
   video.addEventListener('playing', () => {
     loadingSpinner.classList.add('hidden');
     errorState.classList.add('hidden');
-    updatePlayPauseState();
+    centralPlayBtn.classList.remove('hidden');
+    handleVideoStateChange();
+  });
+  video.addEventListener('ended', handleVideoStateChange);
+  video.addEventListener('seeked', () => {
+    loadingSpinner.classList.add('hidden');
+    handleVideoStateChange();
+  });
+  video.addEventListener('canplay', () => {
+    loadingSpinner.classList.add('hidden');
+    handleVideoStateChange();
+  });
+  video.addEventListener('loadeddata', handleVideoStateChange);
+
+  video.addEventListener('waiting', () => {
+    loadingSpinner.classList.remove('hidden');
   });
 
   video.addEventListener('stalled', () => {
     if (video.paused) loadingSpinner.classList.add('hidden');
   });
 
-  video.addEventListener('ended', () => {
-    updatePlayPauseState();
-    showActionFeedback('Ended');
-  });
-
   video.addEventListener('error', () => {
     loadingSpinner.classList.add('hidden');
+    centralPlayBtn.classList.add('hidden');
     errorState.classList.remove('hidden');
     setControlsVisible(true);
   });
@@ -397,14 +450,13 @@ document.addEventListener('DOMContentLoaded', () => {
   video.addEventListener('loadedmetadata', () => {
     durationTimeEl.textContent = formatTime(video.duration);
 
-    // Restore Saved Settings from localStorage
     const savedVol = localStorage.getItem(STORAGE_KEY_VOLUME);
     const savedMute = localStorage.getItem(STORAGE_KEY_MUTED);
     const savedSpeed = localStorage.getItem(STORAGE_KEY_SPEED);
 
     if (savedVol !== null) video.volume = parseFloat(savedVol);
     if (savedMute !== null) video.muted = savedMute === 'true';
-    if (savedSpeed !== null) setPlaybackSpeed(parseFloat(savedSpeed), false);
+    if (savedSpeed !== null) setPlaybackSpeed(parseFloat(savedSpeed), false, false);
 
     updateVolumeUI();
     updateProgress();
@@ -412,7 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Event Listeners ---
 
-  // Central Overlay Click (Desktop)
+  // Central Overlay Click
   centralPlayBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     togglePlay();
@@ -425,55 +477,80 @@ document.addEventListener('DOMContentLoaded', () => {
     handleVolumeChange(parseFloat(e.target.value));
   });
 
-  // Desktop Hover & Controls Auto-Hide
-  container.addEventListener('mousemove', (e) => {
+  // BUG 3: Pointer tracking
+  container.addEventListener('pointerdown', (e) => {
+    lastPointerType = e.pointerType;
+    pointerDownX = e.clientX;
+    pointerDownY = e.clientY;
+    wasHiddenBeforeTap = container.classList.contains('controls-hidden');
+
+    if (e.pointerType === 'touch' && controlsBar.contains(e.target)) {
+      scheduleControlsHide(3000);
+    }
+  });
+
+  // Desktop Hover & Controls Auto-Hide (Mouse/Pen ONLY)
+  container.addEventListener('pointermove', (e) => {
+    if (e.pointerType !== 'mouse' && e.pointerType !== 'pen') return;
     setControlsVisible(true);
     scheduleControlsHide(1500);
   });
 
-  container.addEventListener('mouseleave', () => {
+  container.addEventListener('pointerleave', (e) => {
+    if (e.pointerType !== 'mouse' && e.pointerType !== 'pen') return;
+    isPointerOverControls = false;
     if (!video.paused && !video.ended) {
       setControlsVisible(false);
     }
   });
 
-  controlsBar.addEventListener('mouseenter', () => {
+  controlsBar.addEventListener('pointerenter', (e) => {
+    if (e.pointerType !== 'mouse' && e.pointerType !== 'pen') return;
     isPointerOverControls = true;
     setControlsVisible(true);
   });
 
-  controlsBar.addEventListener('mouseleave', () => {
+  controlsBar.addEventListener('pointerleave', (e) => {
+    if (e.pointerType !== 'mouse' && e.pointerType !== 'pen') return;
     isPointerOverControls = false;
     scheduleControlsHide(1500);
   });
 
-  // Touch & Click Interactions on Video Area
-  container.addEventListener('click', (e) => {
-    // Ignore if clicked on controls bar or speed menu
-    if (controlsBar.contains(e.target) || speedMenu.contains(e.target)) return;
+  // Touch PointerUp handling for video area tap
+  container.addEventListener('pointerup', (e) => {
+    if (e.pointerType !== 'touch') return;
 
-    // Check pointer type for touch vs mouse
-    const isTouch = e.pointerType === 'touch';
+    // Ignore if finger moved >10px (e.g. scrubbing or scrolling)
+    const moveDist = Math.hypot(e.clientX - pointerDownX, e.clientY - pointerDownY);
+    if (moveDist > 10) return;
 
-    if (isTouch) {
-      // Touch behavior: Tap video toggles controls visibility instantly (NOT play/pause)
-      const isCurrentlyHidden = container.classList.contains('controls-hidden');
-      if (isCurrentlyHidden) {
-        setControlsVisible(true);
-        scheduleControlsHide(3000);
-      } else {
-        setControlsVisible(false);
-      }
-    } else {
-      // Desktop behavior: Click video toggles play/pause
-      togglePlay();
-      showActionFeedback(video.paused ? 'Paused' : 'Playing');
+    // Ignore if tapped inside controls bar, speed menu, or central play button
+    if (controlsBar.contains(e.target) || speedMenu.contains(e.target) || centralPlayBtn.contains(e.target)) {
+      return;
     }
+
+    // Touch tap on video: toggle controls visibility instantly
+    const isCurrentlyHidden = container.classList.contains('controls-hidden');
+    if (isCurrentlyHidden) {
+      setControlsVisible(true);
+      scheduleControlsHide(3000);
+    } else {
+      setControlsVisible(false);
+    }
+  });
+
+  // Desktop Video Area Click (Mouse ONLY)
+  container.addEventListener('click', (e) => {
+    if (lastPointerType !== 'mouse') return;
+    if (controlsBar.contains(e.target) || speedMenu.contains(e.target) || centralPlayBtn.contains(e.target)) return;
+
+    togglePlay();
+    showActionFeedback(video.paused ? 'Paused' : 'Playing');
   });
 
   // Touch Double-Tap to Seek ±10s
   container.addEventListener('touchend', (e) => {
-    if (controlsBar.contains(e.target) || speedMenu.contains(e.target)) return;
+    if (controlsBar.contains(e.target) || speedMenu.contains(e.target) || centralPlayBtn.contains(e.target)) return;
 
     const currentTime = Date.now();
     const tapX = e.changedTouches[0].clientX;
@@ -481,14 +558,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const relativeX = tapX - containerRect.left;
 
     if (currentTime - lastTapTime < 300 && Math.abs(tapX - lastTapX) < 40) {
-      // Double tap detected!
+      // Restore controls visibility to state before the first tap
+      if (wasHiddenBeforeTap) {
+        setControlsVisible(false);
+      } else {
+        setControlsVisible(true);
+        scheduleControlsHide(3000);
+      }
+
       if (relativeX < containerRect.width / 2) {
-        // Left side double-tap -> Seek -10s
         video.currentTime = Math.max(0, video.currentTime - 10);
         triggerSeekRipple('left');
         showActionFeedback('-10s');
       } else {
-        // Right side double-tap -> Seek +10s
         video.currentTime = Math.min(video.duration || 0, video.currentTime + 10);
         triggerSeekRipple('right');
         showActionFeedback('+10s');
@@ -500,7 +582,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Double Click on Desktop Video Area -> Fullscreen
   container.addEventListener('dblclick', (e) => {
-    if (controlsBar.contains(e.target) || speedMenu.contains(e.target)) return;
+    if (lastPointerType !== 'mouse') return;
+    if (controlsBar.contains(e.target) || speedMenu.contains(e.target) || centralPlayBtn.contains(e.target)) return;
     toggleFullscreen();
   });
 
@@ -556,19 +639,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- Keyboard Shortcuts ---
   document.addEventListener('keydown', (e) => {
-    // Active element safety check
     const active = document.activeElement;
     if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) {
       return;
     }
 
-    // Work if container is hovered or focused or active inside container
     const isHovered = container.matches(':hover');
     const isFocused = container.contains(active);
 
     if (!isHovered && !isFocused) return;
 
-    // Prevent button double-triggering when space/enter pressed on focused button
     if ((e.key === ' ' || e.key === 'Enter') && active && active.tagName === 'BUTTON') {
       return;
     }
@@ -656,7 +736,6 @@ document.addEventListener('DOMContentLoaded', () => {
         showActionFeedback('End');
         break;
       default:
-        // Digit keys 0-9 for seeking percentage (0% to 90%)
         if (/^[0-9]$/.test(e.key)) {
           e.preventDefault();
           const pct = parseInt(e.key, 10) * 10;

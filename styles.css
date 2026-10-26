@@ -12,12 +12,13 @@
   --text-dim: rgba(255, 255, 255, 0.45);
 
   /* Glass Material Variables */
-  --glass-bg: rgba(255, 255, 255, 0.12);
-  --glass-bg-hover: rgba(255, 255, 255, 0.18);
-  --glass-bg-active: rgba(255, 255, 255, 0.24);
+  --glass-bg: rgba(20, 20, 28, 0.25);
+  --glass-tint: rgba(255, 255, 255, 0.14);
+  --glass-bg-hover: rgba(255, 255, 255, 0.22);
+  --glass-bg-active: rgba(255, 255, 255, 0.3);
   --glass-border: rgba(255, 255, 255, 0.18);
   --glass-border-light: rgba(255, 255, 255, 0.28);
-  --glass-blur: blur(24px) saturate(170%);
+  --glass-blur: blur(20px) saturate(120%);
   --glass-shadow: 0 12px 32px 0 rgba(0, 0, 0, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.25);
   --glass-shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
 
@@ -105,8 +106,27 @@ body {
   display: block;
 }
 
-/* Hide native cursor when inactive */
-.video-container.user-inactive.is-playing {
+/* Bottom gradient scrim for controls readability */
+.video-container::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 100px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.35), transparent);
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity var(--transition-smooth);
+  z-index: 5;
+}
+
+.video-container.controls-hidden::after {
+  opacity: 0;
+}
+
+/* Hide cursor when controls hidden while playing */
+.video-container.controls-hidden.is-playing {
   cursor: none;
 }
 
@@ -177,9 +197,7 @@ body {
 /* Center Overlay (Play/Pause, Spinner, Error, Replay) */
 .center-overlay {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  inset: 0 0 var(--controls-h, 70px) 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -191,7 +209,7 @@ body {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: var(--glass-bg);
+  background: var(--glass-tint);
   border: 1px solid var(--glass-border);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
@@ -207,18 +225,19 @@ body {
   transition: transform var(--transition-fast), opacity var(--transition-fast), background var(--transition-fast);
 }
 
-/* Show central play button ONLY when paused, ended, or loading state (No hover overlap while playing) */
-.video-container.paused .central-play-btn,
-.video-container.ended .central-play-btn {
+/* BUG 4: Show central button whenever controls are visible */
+.video-container:not(.controls-hidden) .central-play-btn {
   opacity: 1;
   pointer-events: auto;
   transform: scale(1);
 }
 
-.central-play-btn:hover {
-  background: var(--glass-bg-hover);
-  border-color: var(--glass-border-light);
-  transform: scale(1.08) !important;
+@media (hover: hover) {
+  .central-play-btn:hover {
+    background: var(--glass-bg-hover);
+    border-color: var(--glass-border-light);
+    transform: scale(1.08) !important;
+  }
 }
 
 .central-play-btn:active {
@@ -342,7 +361,7 @@ body {
   top: 0;
   left: 0;
   height: 100%;
-  background: var(--accent-color);
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 10px;
   width: 0%;
 }
@@ -424,9 +443,11 @@ body {
   transition: background var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
 }
 
-.control-btn:hover {
-  background: var(--glass-bg-hover);
-  color: #fff;
+@media (hover: hover) {
+  .control-btn:hover {
+    background: var(--glass-bg-hover);
+    color: #fff;
+  }
 }
 
 .control-btn:active {
@@ -530,11 +551,17 @@ body {
   width: 38px;
 }
 
+.speed-btn[aria-expanded="true"] {
+  background: var(--glass-bg-hover);
+}
+
 .speed-menu {
   position: absolute;
-  bottom: 70px;
-  right: 18px;
-  background: rgba(15, 20, 32, 0.88);
+  bottom: calc(var(--controls-h, 70px) + 8px);
+  right: 12px;
+  max-height: calc(100% - var(--controls-h, 70px) - 16px);
+  overflow-y: auto;
+  background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
@@ -545,16 +572,7 @@ body {
   flex-direction: column;
   gap: 2px;
   z-index: 35;
-  min-width: 130px;
-}
-
-.speed-menu-header {
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-dim);
-  padding: 6px 10px 4px;
+  min-width: 110px;
 }
 
 .speed-option {
@@ -567,18 +585,29 @@ body {
   font-weight: 500;
   cursor: pointer;
   text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   transition: background var(--transition-fast), color var(--transition-fast);
 }
 
-.speed-option:hover {
-  background: var(--glass-bg-hover);
-  color: #fff;
+@media (hover: hover) {
+  .speed-option:hover {
+    background: var(--glass-bg-hover);
+    color: #fff;
+  }
 }
 
 .speed-option.active {
   color: #ffffff;
   font-weight: 600;
-  background: var(--accent-color);
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.speed-option.active::after {
+  content: '•';
+  margin-left: 6px;
+  font-size: 1rem;
 }
 
 /* Keyboard Hints Footer */
@@ -619,10 +648,42 @@ kbd {
     display: none !important;
   }
   .controls-bar {
-    padding: 8px 10px;
+    padding: 6px 10px;
     bottom: 8px;
     left: 8px;
     right: 8px;
+    gap: 4px;
+  }
+  .timeline-container {
+    height: 12px;
+  }
+  .control-btn {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+  }
+  .central-play-btn {
+    width: 48px;
+    height: 48px;
+  }
+  .central-play-btn .icon {
+    width: 22px;
+    height: 22px;
+  }
+  .speed-menu {
+    flex-direction: row;
+    min-width: auto;
+    right: 8px;
+    left: 8px;
+    justify-content: space-between;
+    padding: 4px;
+  }
+  .speed-option {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+  }
+  .speed-option.active::after {
+    display: none;
   }
 }
 
@@ -633,11 +694,6 @@ kbd {
   .time-display {
     font-size: 0.72rem;
   }
-  .control-btn {
-    width: 34px;
-    height: 34px;
-    min-width: 34px;
-  }
 }
 
 @container player (max-width: 340px) {
@@ -647,6 +703,14 @@ kbd {
   }
   .time-separator, #duration-time {
     display: none;
+  }
+  .central-play-btn {
+    width: 40px;
+    height: 40px;
+  }
+  .central-play-btn .icon {
+    width: 18px;
+    height: 18px;
   }
 }
 
