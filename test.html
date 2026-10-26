@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aura Player - Test Page</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { align-items: flex-start; }
+    .test-panel {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 16px;
+    }
+    .test-panel h2 { font-size: 1rem; margin-bottom: 10px; }
+    .url-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .url-row input {
+      flex: 1; min-width: 200px;
+      background: rgba(0,0,0,0.3); color: #fff;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px; padding: 10px; font: inherit; font-size: 0.85rem;
+    }
+    .btn {
+      background: var(--primary-accent); color: #fff; border: none;
+      border-radius: 8px; padding: 10px 16px; font: inherit;
+      font-weight: 600; cursor: pointer;
+    }
+    .btn:hover { background: var(--primary-accent-hover); }
+    .btn.ghost { background: rgba(255,255,255,0.1); }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 8px;
+    }
+    .stat {
+      background: rgba(0,0,0,0.25); border-radius: 8px;
+      padding: 8px 10px; font-size: 0.8rem;
+    }
+    .stat span { display: block; color: var(--text-muted); font-size: 0.7rem; }
+    .stat b { font-variant-numeric: tabular-nums; }
+    .log {
+      height: 180px; overflow-y: auto;
+      background: rgba(0,0,0,0.35); border-radius: 8px;
+      padding: 8px; font-family: ui-monospace, monospace; font-size: 0.75rem;
+    }
+    .log div { padding: 1px 0; color: #cbd5e1; }
+    .log .err { color: #f87171; }
+    .log .ok { color: #4ade80; }
+    .checklist { list-style: none; display: grid; gap: 6px; font-size: 0.85rem; }
+    .checklist label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+    .row-between { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <div class="page-container">
+    <header class="header">
+      <h1 class="title">Aura Player — Test Page</h1>
+      <p class="subtitle">Halaman khusus buat ngetes fitur player</p>
+    </header>
+
+    <!-- URL Loader -->
+    <section class="test-panel">
+      <h2>Sumber Video</h2>
+      <div class="url-row">
+        <input type="url" id="url-input" value="https://kappa.lol/lfzn10.mp4" placeholder="URL video .mp4">
+        <button class="btn" id="load-btn">Load</button>
+      </div>
+    </section>
+
+    <!-- PLAYER -->
+    <main class="player-wrapper">
+      <div class="video-container" id="video-container" tabindex="0">
+        <video id="video-element" preload="metadata" playsinline>
+          <source src="https://kappa.lol/lfzn10.mp4" type="video/mp4">
+          Your browser does not support HTML5 video.
+        </video>
+
+        <button class="central-play-btn" id="central-play-btn" aria-label="Toggle Play">
+          <svg class="icon play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          <svg class="icon pause-icon hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        </button>
+
+        <div class="action-feedback-overlay" id="action-feedback"></div>
+
+        <div class="controls-bar" id="controls-bar">
+          <div class="timeline-container" id="timeline-container">
+            <div class="timeline-track" id="timeline-track">
+              <div class="buffered-bar" id="buffered-bar"></div>
+              <div class="progress-bar" id="progress-bar"><div class="progress-thumb"></div></div>
+            </div>
+            <div class="timeline-tooltip" id="timeline-tooltip">00:00</div>
+          </div>
+
+          <div class="controls-row">
+            <div class="controls-group left">
+              <button class="control-btn" id="play-pause-btn" title="Play / Pause (Space)" aria-label="Play/Pause">
+                <svg class="icon play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                <svg class="icon pause-icon hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+              </button>
+
+              <div class="volume-container" id="volume-container">
+                <button class="control-btn" id="mute-btn" title="Mute / Unmute (M)" aria-label="Mute">
+                  <svg class="icon volume-high-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                  </svg>
+                  <svg class="icon volume-muted-icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <line x1="23" y1="9" x2="17" y2="15"></line>
+                    <line x1="17" y1="9" x2="23" y2="15"></line>
+                  </svg>
+                </button>
+                <div class="volume-slider-wrapper">
+                  <input type="range" class="volume-slider" id="volume-slider" min="0" max="1" step="0.01" value="1" aria-label="Volume">
+                </div>
+              </div>
+
+              <div class="time-display">
+                <span id="current-time">00:00</span>
+                <span class="time-separator">/</span>
+                <span id="duration-time">00:00</span>
+              </div>
+            </div>
+
+            <div class="controls-group right">
+              <div class="speed-control">
+                <button class="control-btn speed-btn" id="speed-btn" title="Playback Speed">1x</button>
+                <div class="speed-menu hidden" id="speed-menu">
+                  <button class="speed-option" data-speed="0.5">0.5x</button>
+                  <button class="speed-option" data-speed="0.75">0.75x</button>
+                  <button class="speed-option active" data-speed="1.0">1.0x</button>
+                  <button class="speed-option" data-speed="1.25">1.25x</button>
+                  <button class="speed-option" data-speed="1.5">1.5x</button>
+                  <button class="speed-option" data-speed="2.0">2.0x</button>
+                </div>
+              </div>
+
+              <button class="control-btn" id="pip-btn" title="Picture in Picture (P)" aria-label="Picture in Picture">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                  <rect x="11" y="9" width="9" height="7" rx="1" ry="1"></rect>
+                </svg>
+              </button>
+
+              <button class="control-btn" id="fullscreen-btn" title="Fullscreen (F)" aria-label="Fullscreen">
+                <svg class="icon fullscreen-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                </svg>
+                <svg class="icon fullscreen-exit hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Live Stats -->
+    <section class="test-panel">
+      <h2>Live Stats</h2>
+      <div class="stats">
+        <div class="stat"><span>Status</span><b id="s-state">-</b></div>
+        <div class="stat"><span>Current / Duration</span><b id="s-time">-</b></div>
+        <div class="stat"><span>Volume / Muted</span><b id="s-vol">-</b></div>
+        <div class="stat"><span>Playback Rate</span><b id="s-rate">-</b></div>
+        <div class="stat"><span>Buffered</span><b id="s-buf">-</b></div>
+        <div class="stat"><span>Resolusi</span><b id="s-res">-</b></div>
+        <div class="stat"><span>Ready State</span><b id="s-ready">-</b></div>
+        <div class="stat"><span>Fullscreen / PiP</span><b id="s-fs">-</b></div>
+      </div>
+    </section>
+
+    <!-- Checklist -->
+    <section class="test-panel">
+      <div class="row-between">
+        <h2 style="margin:0">Checklist Manual</h2>
+        <button class="btn ghost" id="reset-check">Reset</button>
+      </div>
+      <ul class="checklist" id="checklist">
+        <li><label><input type="checkbox"> Play/Pause (tombol, klik video, Space/K)</label></li>
+        <li><label><input type="checkbox"> Seek klik &amp; drag timeline + tooltip waktu</label></li>
+        <li><label><input type="checkbox"> Seek keyboard ← → (±5 detik)</label></li>
+        <li><label><input type="checkbox"> Volume slider &amp; ↑ ↓</label></li>
+        <li><label><input type="checkbox"> Mute/Unmute (tombol &amp; M)</label></li>
+        <li><label><input type="checkbox"> Speed 0.5x – 2.0x</label></li>
+        <li><label><input type="checkbox"> Fullscreen (tombol &amp; F), ikon berubah</label></li>
+        <li><label><input type="checkbox"> Picture-in-Picture (tombol &amp; P)</label></li>
+        <li><label><input type="checkbox"> Auto-hide controls saat play &amp; muncul lagi saat mouse gerak</label></li>
+        <li><label><input type="checkbox"> Touch: scrub timeline di HP</label></li>
+        <li><label><input type="checkbox"> Buffered bar bertambah saat loading</label></li>
+        <li><label><input type="checkbox"> Replay setelah video selesai</label></li>
+      </ul>
+    </section>
+
+    <!-- Event Log -->
+    <section class="test-panel">
+      <div class="row-between">
+        <h2 style="margin:0">Event Log</h2>
+        <button class="btn ghost" id="clear-log">Clear</button>
+      </div>
+      <div class="log" id="log"></div>
+    </section>
+  </div>
+
+  <!-- Script player asli lu -->
+  <script src="app.js"></script>
+
+  <!-- Script khusus testing -->
+  <script>
+    (() => {
+      const v = document.getElementById('video-element');
+      const logEl = document.getElementById('log');
+      const $ = (id) => document.getElementById(id);
+      const fmt = (s) => isFinite(s) ? s.toFixed(2) + 's' : '-';
+
+      const log = (msg, cls = '') => {
+        const d = document.createElement('div');
+        if (cls) d.className = cls;
+        const t = new Date().toLocaleTimeString('id-ID');
+        d.textContent = `[${t}] ${msg}`;
+        logEl.appendChild(d);
+        logEl.scrollTop = logEl.scrollHeight;
+        if (logEl.children.length > 200) logEl.removeChild(logEl.firstChild);
+      };
+
+      // Event yang dicatat (timeupdate sengaja dikecualikan biar log gak banjir)
+      ['loadstart', 'loadedmetadata', 'canplay', 'playing', 'play', 'pause',
+       'seeking', 'seeked', 'waiting', 'stalled', 'ended', 'ratechange',
+       'enterpictureinpicture', 'leavepictureinpicture'
+      ].forEach(ev => v.addEventListener(ev, () => {
+        let extra = '';
+        if (ev === 'ratechange') extra = ` → ${v.playbackRate}x`;
+        if (ev === 'seeked' || ev === 'seeking') extra = ` → ${fmt(v.currentTime)}`;
+        log(ev + extra, ev === 'ended' || ev === 'canplay' ? 'ok' : '');
+      }));
+
+      v.addEventListener('volumechange', () =>
+        log(`volumechange → ${Math.round(v.volume * 100)}%${v.muted ? ' (muted)' : ''}`));
+
+      v.addEventListener('error', () => {
+        const codes = {
+          1: 'MEDIA_ERR_ABORTED', 2: 'MEDIA_ERR_NETWORK',
+          3: 'MEDIA_ERR_DECODE', 4: 'MEDIA_ERR_SRC_NOT_SUPPORTED'
+        };
+        const e = v.error;
+        log(`ERROR ${e ? codes[e.code] || e.code : ''} ${e && e.message ? '- ' + e.message : ''}`, 'err');
+      });
+
+      document.addEventListener('fullscreenchange', () =>
+        log('fullscreen → ' + (document.fullscreenElement ? 'ON' : 'OFF')));
+
+      // Live stats
+      const readyNames = ['HAVE_NOTHING', 'HAVE_METADATA', 'HAVE_CURRENT_DATA', 'HAVE_FUTURE_DATA', 'HAVE_ENOUGH_DATA'];
+      const updateStats = () => {
+        $('s-state').textContent = v.ended ? 'Ended' : v.paused ? 'Paused' : 'Playing';
+        $('s-time').textContent = `${fmt(v.currentTime)} / ${fmt(v.duration)}`;
+        $('s-vol').textContent = `${Math.round(v.volume * 100)}% / ${v.muted ? 'Ya' : 'Tidak'}`;
+        $('s-rate').textContent = v.playbackRate + 'x';
+        $('s-ready').textContent = readyNames[v.readyState];
+        $('s-res').textContent = v.videoWidth ? `${v.videoWidth}×${v.videoHeight}` : '-';
+        $('s-fs').textContent = `${document.fullscreenElement ? 'ON' : 'OFF'} / ${document.pictureInPictureElement ? 'ON' : 'OFF'}`;
+        if (v.buffered.length && v.duration) {
+          const end = v.buffered.end(v.buffered.length - 1);
+          $('s-buf').textContent = `${fmt(end)} (${Math.round(end / v.duration * 100)}%)`;
+        } else {
+          $('s-buf').textContent = '-';
+        }
+      };
+      setInterval(updateStats, 250);
+      updateStats();
+
+      // Load URL baru
+      $('load-btn').addEventListener('click', () => {
+        const url = $('url-input').value.trim();
+        if (!url) return;
+        log('Load: ' + url);
+        v.src = url;
+        v.load();
+      });
+
+      $('clear-log').addEventListener('click', () => logEl.innerHTML = '');
+      $('reset-check').addEventListener('click', () =>
+        document.querySelectorAll('#checklist input').forEach(c => c.checked = false));
+
+      log('Test page siap. Source: ' + (v.currentSrc || v.querySelector('source').src));
+    })();
+  </script>
+</body>
+</html>
