@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aura Player - Glassmorphism HTML5 Video Player</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="page-container">
+    <header class="header">
+      <h1 class="title">Aura Player</h1>
+      <p class="subtitle">Custom HTML5 Video Player with Glassmorphism UI</p>
+    </header>
+
+    <main class="player-wrapper">
+      <div class="video-container" id="video-container" tabindex="0">
+        <video id="video-element" preload="metadata" playsinline>
+          <source src="sample.mp4" type="video/mp4">
+          Your browser does not support HTML5 video.
+        </video>
+
+        <!-- Central Play/Pause Overlay -->
+        <button class="central-play-btn" id="central-play-btn" aria-label="Toggle Play">
+          <svg class="icon play-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+          <svg class="icon pause-icon hidden" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+          </svg>
+        </button>
+
+        <!-- Brief Flash Feedback Overlay (e.g. +5s, -5s, volume change) -->
+        <div class="action-feedback-overlay" id="action-feedback"></div>
+
+        <!-- Custom Glassmorphism Control Bar -->
+        <div class="controls-bar" id="controls-bar">
+          <!-- Timeline / Progress Bar -->
+          <div class="timeline-container" id="timeline-container">
+            <div class="timeline-track" id="timeline-track">
+              <div class="buffered-bar" id="buffered-bar"></div>
+              <div class="progress-bar" id="progress-bar">
+                <div class="progress-thumb"></div>
+              </div>
+            </div>
+            <div class="timeline-tooltip" id="timeline-tooltip">00:00</div>
+          </div>
+
+          <!-- Bottom Control Bar -->
+          <div class="controls-row">
+            <!-- Left Group -->
+            <div class="controls-group left">
+              <!-- Play / Pause Button -->
+              <button class="control-btn" id="play-pause-btn" title="Play / Pause (Space)" aria-label="Play/Pause">
+                <svg class="icon play-icon" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+                <svg class="icon pause-icon hidden" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                </svg>
+              </button>
+
+              <!-- Volume Control -->
+              <div class="volume-container" id="volume-container">
+                <button class="control-btn" id="mute-btn" title="Mute / Unmute (M)" aria-label="Mute">
+                  <svg class="icon volume-high-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                  </svg>
+                  <svg class="icon volume-muted-icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <line x1="23" y1="9" x2="17" y2="15"></line>
+                    <line x1="17" y1="9" x2="23" y2="15"></line>
+                  </svg>
+                </button>
+                <div class="volume-slider-wrapper">
+                  <input type="range" class="volume-slider" id="volume-slider" min="0" max="1" step="0.01" value="1" aria-label="Volume">
+                </div>
+              </div>
+
+              <!-- Time Display -->
+              <div class="time-display">
+                <span id="current-time">00:00</span>
+                <span class="time-separator">/</span>
+                <span id="duration-time">00:00</span>
+              </div>
+            </div>
+
+            <!-- Right Group -->
+            <div class="controls-group right">
+              <!-- Playback Speed Menu -->
+              <div class="speed-control">
+                <button class="control-btn speed-btn" id="speed-btn" title="Playback Speed">1x</button>
+                <div class="speed-menu hidden" id="speed-menu">
+                  <button class="speed-option" data-speed="0.5">0.5x</button>
+                  <button class="speed-option" data-speed="0.75">0.75x</button>
+                  <button class="speed-option active" data-speed="1.0">1.0x</button>
+                  <button class="speed-option" data-speed="1.25">1.25x</button>
+                  <button class="speed-option" data-speed="1.5">1.5x</button>
+                  <button class="speed-option" data-speed="2.0">2.0x</button>
+                </div>
+              </div>
+
+              <!-- Picture in Picture Button -->
+              <button class="control-btn" id="pip-btn" title="Picture in Picture (P)" aria-label="Picture in Picture">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                  <rect x="11" y="9" width="9" height="7" rx="1" ry="1"></rect>
+                </svg>
+              </button>
+
+              <!-- Fullscreen Button -->
+              <button class="control-btn" id="fullscreen-btn" title="Fullscreen (F)" aria-label="Fullscreen">
+                <svg class="icon fullscreen-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                </svg>
+                <svg class="icon fullscreen-exit hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="keyboard-hints">
+        <span class="hint-badge"><kbd>Space</kbd> Play/Pause</span>
+        <span class="hint-badge"><kbd>←</kbd> <kbd>→</kbd> ±5s</span>
+        <span class="hint-badge"><kbd>↑</kbd> <kbd>↓</kbd> Volume</span>
+        <span class="hint-badge"><kbd>F</kbd> Fullscreen</span>
+        <span class="hint-badge"><kbd>M</kbd> Mute</span>
+        <span class="hint-badge"><kbd>P</kbd> PiP</span>
+      </div>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
