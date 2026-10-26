@@ -1,22 +1,31 @@
-/* CSS Styles for Aura Player - Glassmorphism UI */
+/* CSS Styles for Aura Player - Apple Liquid Glass UI */
 
 :root {
-  --bg-gradient-start: #0f172a;
-  --bg-gradient-end: #1e1b4b;
-  --primary-accent: #6366f1;
-  --primary-accent-hover: #4f46e5;
+  --bg-gradient-start: #090d16;
+  --bg-gradient-end: #121829;
+  --accent-color: #6366f1;
+  --accent-color-hover: #4f46e5;
   --accent-glow: rgba(99, 102, 241, 0.4);
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
 
-  /* Glassmorphism Variables */
-  --glass-bg: rgba(15, 23, 42, 0.65);
-  --glass-border: rgba(255, 255, 255, 0.12);
-  --glass-blur: blur(16px);
-  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --text-main: #ffffff;
+  --text-muted: rgba(255, 255, 255, 0.65);
+  --text-dim: rgba(255, 255, 255, 0.45);
 
-  --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Glass Material Variables */
+  --glass-bg: rgba(255, 255, 255, 0.12);
+  --glass-bg-hover: rgba(255, 255, 255, 0.18);
+  --glass-bg-active: rgba(255, 255, 255, 0.24);
+  --glass-border: rgba(255, 255, 255, 0.18);
+  --glass-border-light: rgba(255, 255, 255, 0.28);
+  --glass-blur: blur(24px) saturate(170%);
+  --glass-shadow: 0 12px 32px 0 rgba(0, 0, 0, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.25);
+  --glass-shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.2);
+
+  --pill-radius: 20px;
+  --btn-radius: 50%;
+
+  --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-smooth: 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 * {
@@ -27,7 +36,7 @@
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
   color: var(--text-main);
   min-height: 100vh;
@@ -35,6 +44,7 @@ body {
   justify-content: center;
   align-items: center;
   padding: 20px;
+  overflow-x: hidden;
 }
 
 .page-container {
@@ -42,7 +52,7 @@ body {
   max-width: 1000px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
 
 .header {
@@ -50,18 +60,19 @@ body {
 }
 
 .title {
-  font-size: 2.2rem;
+  font-size: 2rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 100%);
+  background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .subtitle {
   color: var(--text-muted);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
+  font-weight: 400;
 }
 
 /* Player Outer Wrapper */
@@ -71,16 +82,20 @@ body {
   justify-content: center;
 }
 
+/* Container Queries enabled on player container */
 .video-container {
+  container-type: inline-size;
+  container-name: player;
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
   background-color: #000;
-  border-radius: 18px;
+  border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.1);
   outline: none;
   user-select: none;
+  -webkit-user-select: none;
 }
 
 .video-container video {
@@ -90,19 +105,97 @@ body {
   display: block;
 }
 
-/* Central Overlay Button */
-.central-play-btn {
+/* Hide native cursor when inactive */
+.video-container.user-inactive.is-playing {
+  cursor: none;
+}
+
+/* Top-Center Action Feedback Toast (Glass Style) */
+.action-feedback-overlay {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-10px) scale(0.95);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow-soft);
+  color: var(--text-main);
+  padding: 8px 18px;
+  border-radius: 30px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+  z-index: 20;
+}
+
+.action-feedback-overlay.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0) scale(1);
+}
+
+/* Touch Seek Ripples */
+.seek-ripple {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 35%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease;
+  z-index: 15;
+}
+
+.seek-ripple-left { left: 0; background: radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.15), transparent 70%); }
+.seek-ripple-right { right: 0; background: radial-gradient(circle at 80% 50%, rgba(255, 255, 255, 0.15), transparent 70%); }
+
+.seek-ripple.active {
+  opacity: 1;
+}
+
+.ripple-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 12px 18px;
+  border-radius: 50px;
+  backdrop-filter: blur(8px);
+}
+
+/* Center Overlay (Play/Pause, Spinner, Error, Replay) */
+.center-overlay {
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%) scale(0.9);
-  width: 72px;
-  height: 72px;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.central-play-btn {
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow);
   color: #fff;
   display: flex;
   align-items: center;
@@ -110,106 +203,128 @@ body {
   cursor: pointer;
   opacity: 0;
   pointer-events: none;
+  transform: scale(0.9);
   transition: transform var(--transition-fast), opacity var(--transition-fast), background var(--transition-fast);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  z-index: 5;
 }
 
-.video-container:hover .central-play-btn,
-.video-container.paused .central-play-btn {
+/* Show central play button ONLY when paused, ended, or loading state (No hover overlap while playing) */
+.video-container.paused .central-play-btn,
+.video-container.ended .central-play-btn {
   opacity: 1;
   pointer-events: auto;
-  transform: translate(-50%, -50%) scale(1);
+  transform: scale(1);
 }
 
 .central-play-btn:hover {
-  background: var(--primary-accent);
-  border-color: var(--primary-accent);
-  transform: translate(-50%, -50%) scale(1.1) !important;
-  box-shadow: 0 0 25px var(--accent-glow);
+  background: var(--glass-bg-hover);
+  border-color: var(--glass-border-light);
+  transform: scale(1.08) !important;
+}
+
+.central-play-btn:active {
+  transform: scale(0.94) !important;
 }
 
 .central-play-btn .icon {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
 }
 
-/* Action Feedback Overlay */
-.action-feedback-overlay {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0, 0, 0, 0.7);
+/* Loading Spinner */
+.loading-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner-ring {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Error State */
+.error-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(220, 38, 38, 0.3);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  backdrop-filter: var(--glass-blur);
   color: #fff;
-  padding: 12px 24px;
-  border-radius: 30px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.3s ease, transform 0.3s ease;
-  backdrop-filter: blur(8px);
-  z-index: 6;
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
 }
 
-.action-feedback-overlay.show {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1.05);
+.error-state .icon {
+  width: 20px;
+  height: 20px;
 }
 
-/* Controls Bar (Glassmorphism UI) */
+/* Liquid Glass Capsule / Pill Controls Bar */
 .controls-bar {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  border-top: 1px solid var(--glass-border);
-  padding: 12px 18px 16px;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: var(--pill-radius);
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  opacity: 1;
+  transform: translateY(0);
   transition: opacity var(--transition-smooth), transform var(--transition-smooth);
-  z-index: 10;
+  z-index: 25;
 }
 
-/* Auto-hide inactive state */
-.video-container.user-inactive:not(.paused) .controls-bar {
-  opacity: 0;
-  transform: translateY(10px);
-  pointer-events: none;
+/* Rapid and Responsive Controls Hiding */
+.video-container.controls-hidden .controls-bar {
+  opacity: 0 !important;
+  transform: translateY(8px) !important;
+  pointer-events: none !important;
 }
 
-.video-container.user-inactive:not(.paused) {
-  cursor: none;
-}
-
-/* Timeline / Seek bar */
+/* Timeline / Progress Bar */
 .timeline-container {
   position: relative;
   width: 100%;
-  height: 18px;
+  height: 16px;
   display: flex;
   align-items: center;
   cursor: pointer;
   touch-action: none;
+  outline: none;
 }
 
 .timeline-track {
   position: relative;
   width: 100%;
-  height: 6px;
+  height: 4px;
   background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
+  border-radius: 10px;
   overflow: visible;
   transition: height var(--transition-fast);
 }
 
-.timeline-container:hover .timeline-track {
-  height: 8px;
+.timeline-container:hover .timeline-track,
+.timeline-container:focus-visible .timeline-track,
+.timeline-container.dragging .timeline-track {
+  height: 6px;
 }
 
 .buffered-bar {
@@ -218,7 +333,7 @@ body {
   left: 0;
   height: 100%;
   background: rgba(255, 255, 255, 0.35);
-  border-radius: 3px;
+  border-radius: 10px;
   width: 0%;
 }
 
@@ -227,48 +342,54 @@ body {
   top: 0;
   left: 0;
   height: 100%;
-  background: linear-gradient(90deg, #818cf8, var(--primary-accent));
-  border-radius: 3px;
+  background: var(--accent-color);
+  border-radius: 10px;
   width: 0%;
 }
 
 .progress-thumb {
   position: absolute;
-  right: -7px;
+  right: -6px;
   top: 50%;
   transform: translateY(-50%) scale(0);
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 0 10px var(--accent-glow);
+  background: #ffffff;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.5), 0 0 10px var(--accent-glow);
   transition: transform var(--transition-fast);
 }
 
 .timeline-container:hover .progress-thumb,
-.timeline-container:active .progress-thumb {
+.timeline-container:focus-visible .progress-thumb,
+.timeline-container.dragging .progress-thumb {
   transform: translateY(-50%) scale(1);
 }
 
-/* Tooltip */
+/* Clamped Timeline Tooltip */
 .timeline-tooltip {
   position: absolute;
-  bottom: 24px;
+  bottom: 22px;
   transform: translateX(-50%);
-  background: rgba(15, 23, 42, 0.9);
+  background: rgba(10, 15, 26, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   color: #fff;
-  padding: 4px 8px;
+  padding: 3px 8px;
   border-radius: 6px;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 500;
+  font-variant-numeric: tabular-nums;
   pointer-events: none;
   opacity: 0;
   transition: opacity var(--transition-fast);
   border: 1px solid var(--glass-border);
   white-space: nowrap;
+  z-index: 30;
 }
 
-.timeline-container:hover .timeline-tooltip {
+.timeline-container:hover .timeline-tooltip,
+.timeline-container.dragging .timeline-tooltip {
   opacity: 1;
 }
 
@@ -277,54 +398,61 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
 }
 
 .controls-group {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
 }
 
-/* Control Buttons */
+/* Control Buttons (Soft Glass Circles) */
 .control-btn {
   background: transparent;
   border: none;
   color: var(--text-main);
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-  border-radius: 10px;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: var(--btn-radius);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  outline: none;
   transition: background var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
 }
 
 .control-btn:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--glass-bg-hover);
   color: #fff;
-  transform: translateY(-1px);
 }
 
 .control-btn:active {
-  transform: translateY(0);
+  transform: scale(0.94);
+  background: var(--glass-bg-active);
+}
+
+.control-btn:focus-visible,
+.timeline-container:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
 }
 
 .control-btn .icon {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
 }
 
 .hidden {
   display: none !important;
 }
 
-/* Volume Container & Slider */
+/* Volume Control Container - Reserved Width Popover/Overlay without layout shifts */
 .volume-container {
   display: flex;
   align-items: center;
-  gap: 6px;
   position: relative;
 }
 
@@ -335,20 +463,22 @@ body {
   opacity: 0;
   display: flex;
   align-items: center;
+  padding-left: 0;
 }
 
 .volume-container:hover .volume-slider-wrapper,
-.volume-slider-wrapper:focus-within {
-  width: 80px;
+.volume-container:focus-within .volume-slider-wrapper {
+  width: 70px;
   opacity: 1;
+  padding-left: 4px;
 }
 
 .volume-slider {
   -webkit-appearance: none;
   appearance: none;
-  width: 70px;
-  height: 5px;
-  border-radius: 3px;
+  width: 60px;
+  height: 4px;
+  border-radius: 4px;
   background: rgba(255, 255, 255, 0.25);
   outline: none;
   cursor: pointer;
@@ -357,30 +487,31 @@ body {
 .volume-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 12px;
-  height: 12px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
-  background: #fff;
+  background: #ffffff;
   cursor: pointer;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
 }
 
 .volume-slider::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
-  background: #fff;
+  background: #ffffff;
   cursor: pointer;
   border: none;
 }
 
 /* Time Display */
 .time-display {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 500;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
-  margin-left: 4px;
+  margin-left: 2px;
+  white-space: nowrap;
 }
 
 .time-display #current-time {
@@ -388,45 +519,51 @@ body {
 }
 
 .time-separator {
-  margin: 0 3px;
-  opacity: 0.6;
+  margin: 0 2px;
+  opacity: 0.5;
 }
 
-/* Speed Selector Menu */
-.speed-control {
-  position: relative;
-}
-
+/* Speed Selector Menu (Sibling element opening upward relative to player container) */
 .speed-btn {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  width: auto;
-  padding: 0 10px;
+  width: 38px;
 }
 
 .speed-menu {
   position: absolute;
-  bottom: 48px;
-  right: 0;
-  background: rgba(15, 23, 42, 0.95);
-  border: 1px solid var(--glass-border);
+  bottom: 70px;
+  right: 18px;
+  background: rgba(15, 20, 32, 0.88);
   backdrop-filter: var(--glass-blur);
-  border-radius: 12px;
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: 14px;
   padding: 6px;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-  z-index: 20;
+  z-index: 35;
+  min-width: 130px;
+}
+
+.speed-menu-header {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  padding: 6px 10px 4px;
 }
 
 .speed-option {
   background: transparent;
   border: none;
   color: var(--text-muted);
-  padding: 6px 16px;
-  border-radius: 6px;
-  font-size: 0.8rem;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
   font-weight: 500;
   cursor: pointer;
   text-align: left;
@@ -434,14 +571,14 @@ body {
 }
 
 .speed-option:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--glass-bg-hover);
   color: #fff;
 }
 
 .speed-option.active {
-  color: var(--primary-accent);
-  font-weight: 700;
-  background: rgba(99, 102, 241, 0.15);
+  color: #ffffff;
+  font-weight: 600;
+  background: var(--accent-color);
 }
 
 /* Keyboard Hints Footer */
@@ -454,14 +591,14 @@ body {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .hint-badge {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
-  background: rgba(255, 255, 255, 0.05);
-  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 4px 8px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
@@ -469,39 +606,84 @@ body {
 kbd {
   background: rgba(255, 255, 255, 0.15);
   color: #fff;
-  padding: 2px 5px;
+  padding: 1px 4px;
   border-radius: 4px;
   font-family: inherit;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 600;
 }
 
-/* Mobile & Touch responsiveness */
-@media (max-width: 640px) {
-  body {
-    padding: 10px;
-  }
-
-  .title {
-    font-size: 1.6rem;
-  }
-
-  .controls-bar {
-    padding: 10px 12px 12px;
-  }
-
+/* Container Queries for Overlap/Collision Prevention */
+@container player (max-width: 520px) {
   .volume-slider-wrapper {
-    width: 60px;
-    opacity: 1; /* Always show volume slider on mobile for touch UX */
+    display: none !important;
   }
+  .controls-bar {
+    padding: 8px 10px;
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+  }
+}
 
+@container player (max-width: 420px) {
+  #pip-btn {
+    display: none !important;
+  }
   .time-display {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
   }
-
   .control-btn {
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+  }
+}
+
+@container player (max-width: 340px) {
+  .speed-btn {
+    font-size: 0.72rem;
+    width: 32px;
+  }
+  .time-separator, #duration-time {
+    display: none;
+  }
+}
+
+/* Fullscreen Mode Fixes */
+.video-container:fullscreen,
+.video-container:-webkit-full-screen {
+  border-radius: 0 !important;
+  aspect-ratio: auto !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  box-shadow: none !important;
+}
+
+.video-container:fullscreen .controls-bar,
+.video-container:-webkit-full-screen .controls-bar {
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  left: calc(16px + env(safe-area-inset-left, 0px));
+  right: calc(16px + env(safe-area-inset-right, 0px));
+}
+
+/* Accessibility & Preferences Fallbacks */
+@supports not (backdrop-filter: blur(1px)) {
+  .controls-bar, .speed-menu, .central-play-btn, .action-feedback-overlay {
+    background: rgba(15, 20, 30, 0.95);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .controls-bar, .speed-menu, .central-play-btn, .action-feedback-overlay {
+    background: rgba(15, 20, 30, 0.98);
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }
