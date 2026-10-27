@@ -1,5 +1,5 @@
 /**
- * Aura Player - Apple Liquid Glass Custom HTML5 Video Player Logic
+ * JW Player - Video Player Logic
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -7,14 +7,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const container = document.getElementById('video-container');
   const video = document.getElementById('video-element');
   const controlsBar = document.getElementById('controls-bar');
-  const centerOverlay = document.getElementById('center-overlay');
+  const topTitleBar = document.getElementById('top-title-bar');
 
   // Buttons
   const playPauseBtn = document.getElementById('play-pause-btn');
   const centralPlayBtn = document.getElementById('central-play-btn');
+  const rewindBtn = document.getElementById('rewind-btn');
+  const forwardBtn = document.getElementById('forward-btn');
   const muteBtn = document.getElementById('mute-btn');
-  const speedBtn = document.getElementById('speed-btn');
-  const speedMenu = document.getElementById('speed-menu');
+  const settingsBtn = document.getElementById('settings-btn');
+  const settingsMenu = document.getElementById('settings-menu');
+  const settingsCloseBtn = document.getElementById('settings-close-btn');
   const pipBtn = document.getElementById('pip-btn');
   const fullscreenBtn = document.getElementById('fullscreen-btn');
 
@@ -41,10 +44,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const durationTimeEl = document.getElementById('duration-time');
   const actionFeedback = document.getElementById('action-feedback');
 
+  // Settings Tabs and Options
+  const tabSpeed = document.getElementById('tab-speed');
+  const tabQuality = document.getElementById('tab-quality');
+  const speedOptions = document.getElementById('speed-options');
+  const qualityOptions = document.getElementById('quality-options');
+
   // --- LocalStorage Keys ---
-  const STORAGE_KEY_VOLUME = 'aura_player_volume';
-  const STORAGE_KEY_MUTED = 'aura_player_muted';
-  const STORAGE_KEY_SPEED = 'aura_player_speed';
+  const STORAGE_KEY_VOLUME = 'jw_player_volume';
+  const STORAGE_KEY_MUTED = 'jw_player_muted';
+  const STORAGE_KEY_SPEED = 'jw_player_speed';
+  const STORAGE_KEY_QUALITY = 'jw_player_quality';
 
   // --- State Variables ---
   let isScrubbing = false;
@@ -57,27 +67,14 @@ document.addEventListener('DOMContentLoaded', () => {
   let lastTapX = 0;
   let seekAnimationFrame = null;
 
-  // Pointer tracking & gesture state
+  // Pointer tracking
   let lastPointerType = 'mouse';
   let pointerDownX = 0;
   let pointerDownY = 0;
   let wasHiddenBeforeTap = false;
 
-  // Track hover/focus states to prevent controls hiding on desktop
   let isPointerOverControls = false;
-  let isSpeedMenuOpen = false;
-
-  // --- ResizeObserver for Dynamic Controls Bar Height ---
-  if (window.ResizeObserver && controlsBar) {
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const height = entry.contentRect.height;
-        const bottomOffset = container.offsetWidth <= 520 ? 16 : 24;
-        container.style.setProperty('--controls-h', `${Math.round(height + bottomOffset)}px`);
-      }
-    });
-    ro.observe(controlsBar);
-  }
+  let isSettingsMenuOpen = false;
 
   // --- Utility Functions ---
   const formatTime = (seconds) => {
@@ -116,11 +113,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const setControlsVisible = (visible) => {
     clearTimeout(controlsHideTimeout);
 
-    // Rules preventing controls from hiding
     if (!visible) {
       if (video.paused || video.ended) return;
       if (isPointerOverControls) return;
-      if (isSpeedMenuOpen) return;
+      if (isSettingsMenuOpen) return;
       if (isScrubbing) return;
       if (controlsBar.contains(document.activeElement) && document.activeElement.matches(':focus-visible')) return;
     }
@@ -132,10 +128,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  const scheduleControlsHide = (delayMs = 1500) => {
+  const scheduleControlsHide = (delayMs = 2500) => {
     clearTimeout(controlsHideTimeout);
     if (video.paused || video.ended) return;
-    if (isSpeedMenuOpen || isScrubbing) return;
+    if (isSettingsMenuOpen || isScrubbing) return;
     controlsHideTimeout = setTimeout(() => {
       setControlsVisible(false);
     }, delayMs);
@@ -154,7 +150,6 @@ document.addEventListener('DOMContentLoaded', () => {
     updatePlayPauseState();
   };
 
-  // BUG 1 & BUG 2: Exclusive play/pause/ended state updates
   const updatePlayPauseState = () => {
     if (isScrubbing) return;
 
@@ -166,15 +161,10 @@ document.addEventListener('DOMContentLoaded', () => {
     container.classList.toggle('ended', isEnded);
     container.classList.toggle('is-playing', isPlaying);
 
-    // Exclusive Icon Visibility
-    // 1. Ended -> Replay icon only
-    // 2. Paused -> Play icon only
-    // 3. Playing -> Pause icon only
     playIcons.forEach(icon => icon.classList.toggle('hidden', !isPaused || isEnded));
     pauseIcons.forEach(icon => icon.classList.toggle('hidden', !isPlaying));
     replayIcons.forEach(icon => icon.classList.toggle('hidden', !isEnded));
 
-    // Update ARIA Labels
     let stateLabel = 'Play';
     if (isEnded) stateLabel = 'Replay';
     else if (isPlaying) stateLabel = 'Pause';
@@ -186,8 +176,21 @@ document.addEventListener('DOMContentLoaded', () => {
     if (isPaused || isEnded) {
       setControlsVisible(true);
     } else {
-      scheduleControlsHide(1500);
+      scheduleControlsHide(2500);
     }
+  };
+
+  // --- Rewind / Forward Quick Jump Logic ---
+  const rewindTime = (seconds = 10) => {
+    video.currentTime = Math.max(0, video.currentTime - seconds);
+    showActionFeedback(`-${seconds}s`);
+    triggerSeekRipple('left');
+  };
+
+  const forwardTime = (seconds = 10) => {
+    video.currentTime = Math.min(video.duration || 0, video.currentTime + seconds);
+    showActionFeedback(`+${seconds}s`);
+    triggerSeekRipple('right');
   };
 
   // --- Volume Logic ---
@@ -224,10 +227,10 @@ document.addEventListener('DOMContentLoaded', () => {
     volumeSlider.value = displayVal;
 
     const pct = displayVal * 100;
-    volumeSlider.style.background = `linear-gradient(to right, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.9) ${pct}%, rgba(255,255,255,0.2) ${pct}%, rgba(255,255,255,0.2) 100%)`;
+    volumeSlider.style.background = `linear-gradient(to right, #ff2147 0%, #ff2147 ${pct}%, rgba(255,255,255,0.3) ${pct}%, rgba(255,255,255,0.3) 100%)`;
   };
 
-  // --- Timeline & Progress Logic (Pointer Events) ---
+  // --- Timeline & Progress Logic ---
   const updateProgress = () => {
     if (!isScrubbing) {
       const current = video.currentTime || 0;
@@ -374,30 +377,42 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // --- Playback Speed Logic ---
-  const toggleSpeedMenu = (open) => {
-    isSpeedMenuOpen = typeof open === 'boolean' ? open : speedMenu.classList.contains('hidden');
-    speedMenu.classList.toggle('hidden', !isSpeedMenuOpen);
-    speedBtn.setAttribute('aria-expanded', isSpeedMenuOpen ? 'true' : 'false');
+  // --- Settings Menu Logic ---
+  const toggleSettingsMenu = (open) => {
+    isSettingsMenuOpen = typeof open === 'boolean' ? open : settingsMenu.classList.contains('hidden');
+    settingsMenu.classList.toggle('hidden', !isSettingsMenuOpen);
+    settingsBtn.setAttribute('aria-expanded', isSettingsMenuOpen ? 'true' : 'false');
 
-    if (isSpeedMenuOpen) {
+    if (isSettingsMenuOpen) {
       setControlsVisible(true);
+    }
+  };
+
+  const switchSettingsTab = (targetId) => {
+    if (targetId === 'speed-options') {
+      tabSpeed.classList.add('active');
+      tabQuality.classList.remove('active');
+      speedOptions.classList.remove('hidden');
+      qualityOptions.classList.add('hidden');
+    } else {
+      tabQuality.classList.add('active');
+      tabSpeed.classList.remove('active');
+      qualityOptions.classList.remove('hidden');
+      speedOptions.classList.add('hidden');
     }
   };
 
   const setPlaybackSpeed = (speed, persist = true, showToast = true) => {
     video.playbackRate = speed;
-    speedBtn.textContent = speed === 1.0 ? '1x' : `${speed}x`;
 
-    document.querySelectorAll('.speed-option').forEach(opt => {
+    document.querySelectorAll('#speed-options .menu-option').forEach(opt => {
       const match = parseFloat(opt.dataset.speed) === speed;
       opt.classList.toggle('active', match);
       opt.setAttribute('aria-checked', match ? 'true' : 'false');
     });
 
-    toggleSpeedMenu(false);
     if (showToast) {
-      showActionFeedback(`${speed}x Speed`);
+      showActionFeedback(`Speed ${speed}x`);
     }
 
     if (persist) {
@@ -405,7 +420,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // --- Video Event Listeners (BUG 1) ---
+  const setQuality = (quality, persist = true) => {
+    document.querySelectorAll('#quality-options .menu-option').forEach(opt => {
+      const match = opt.dataset.quality === quality;
+      opt.classList.toggle('active', match);
+      opt.setAttribute('aria-checked', match ? 'true' : 'false');
+    });
+
+    showActionFeedback(`Quality: ${quality.toUpperCase()}`);
+
+    if (persist) {
+      localStorage.setItem(STORAGE_KEY_QUALITY, quality);
+    }
+  };
+
+  // --- Video Event Listeners ---
   const handleVideoStateChange = () => {
     updatePlayPauseState();
   };
@@ -453,10 +482,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedVol = localStorage.getItem(STORAGE_KEY_VOLUME);
     const savedMute = localStorage.getItem(STORAGE_KEY_MUTED);
     const savedSpeed = localStorage.getItem(STORAGE_KEY_SPEED);
+    const savedQuality = localStorage.getItem(STORAGE_KEY_QUALITY);
 
     if (savedVol !== null) video.volume = parseFloat(savedVol);
     if (savedMute !== null) video.muted = savedMute === 'true';
     if (savedSpeed !== null) setPlaybackSpeed(parseFloat(savedSpeed), false, false);
+    if (savedQuality !== null) setQuality(savedQuality, false);
 
     updateVolumeUI();
     updateProgress();
@@ -472,12 +503,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Controls Row Buttons
   playPauseBtn.addEventListener('click', togglePlay);
+  rewindBtn.addEventListener('click', () => rewindTime(10));
+  forwardBtn.addEventListener('click', () => forwardTime(10));
   muteBtn.addEventListener('click', toggleMute);
   volumeSlider.addEventListener('input', (e) => {
     handleVolumeChange(parseFloat(e.target.value));
   });
 
-  // BUG 3: Pointer tracking
+  // Pointer tracking for desktop and touch
   container.addEventListener('pointerdown', (e) => {
     lastPointerType = e.pointerType;
     pointerDownX = e.clientX;
@@ -489,11 +522,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Desktop Hover & Controls Auto-Hide (Mouse/Pen ONLY)
   container.addEventListener('pointermove', (e) => {
     if (e.pointerType !== 'mouse' && e.pointerType !== 'pen') return;
     setControlsVisible(true);
-    scheduleControlsHide(1500);
+    scheduleControlsHide(2500);
   });
 
   container.addEventListener('pointerleave', (e) => {
@@ -513,23 +545,20 @@ document.addEventListener('DOMContentLoaded', () => {
   controlsBar.addEventListener('pointerleave', (e) => {
     if (e.pointerType !== 'mouse' && e.pointerType !== 'pen') return;
     isPointerOverControls = false;
-    scheduleControlsHide(1500);
+    scheduleControlsHide(2500);
   });
 
-  // Touch PointerUp handling for video area tap
+  // Touch tap handling
   container.addEventListener('pointerup', (e) => {
     if (e.pointerType !== 'touch') return;
 
-    // Ignore if finger moved >10px (e.g. scrubbing or scrolling)
     const moveDist = Math.hypot(e.clientX - pointerDownX, e.clientY - pointerDownY);
     if (moveDist > 10) return;
 
-    // Ignore if tapped inside controls bar, speed menu, or central play button
-    if (controlsBar.contains(e.target) || speedMenu.contains(e.target) || centralPlayBtn.contains(e.target)) {
+    if (controlsBar.contains(e.target) || settingsMenu.contains(e.target) || centralPlayBtn.contains(e.target)) {
       return;
     }
 
-    // Touch tap on video: toggle controls visibility instantly
     const isCurrentlyHidden = container.classList.contains('controls-hidden');
     if (isCurrentlyHidden) {
       setControlsVisible(true);
@@ -539,18 +568,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Desktop Video Area Click (Mouse ONLY)
+  // Desktop Click Video Area
   container.addEventListener('click', (e) => {
     if (lastPointerType !== 'mouse') return;
-    if (controlsBar.contains(e.target) || speedMenu.contains(e.target) || centralPlayBtn.contains(e.target)) return;
+    if (controlsBar.contains(e.target) || settingsMenu.contains(e.target) || centralPlayBtn.contains(e.target)) return;
 
     togglePlay();
     showActionFeedback(video.paused ? 'Paused' : 'Playing');
   });
 
-  // Touch Double-Tap to Seek ±10s
+  // Touch Double-Tap to Seek
   container.addEventListener('touchend', (e) => {
-    if (controlsBar.contains(e.target) || speedMenu.contains(e.target) || centralPlayBtn.contains(e.target)) return;
+    if (controlsBar.contains(e.target) || settingsMenu.contains(e.target) || centralPlayBtn.contains(e.target)) return;
 
     const currentTime = Date.now();
     const tapX = e.changedTouches[0].clientX;
@@ -558,7 +587,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const relativeX = tapX - containerRect.left;
 
     if (currentTime - lastTapTime < 300 && Math.abs(tapX - lastTapX) < 40) {
-      // Restore controls visibility to state before the first tap
       if (wasHiddenBeforeTap) {
         setControlsVisible(false);
       } else {
@@ -567,23 +595,19 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       if (relativeX < containerRect.width / 2) {
-        video.currentTime = Math.max(0, video.currentTime - 10);
-        triggerSeekRipple('left');
-        showActionFeedback('-10s');
+        rewindTime(10);
       } else {
-        video.currentTime = Math.min(video.duration || 0, video.currentTime + 10);
-        triggerSeekRipple('right');
-        showActionFeedback('+10s');
+        forwardTime(10);
       }
     }
     lastTapTime = currentTime;
     lastTapX = tapX;
   });
 
-  // Double Click on Desktop Video Area -> Fullscreen
+  // Double Click Fullscreen
   container.addEventListener('dblclick', (e) => {
     if (lastPointerType !== 'mouse') return;
-    if (controlsBar.contains(e.target) || speedMenu.contains(e.target) || centralPlayBtn.contains(e.target)) return;
+    if (controlsBar.contains(e.target) || settingsMenu.contains(e.target) || centralPlayBtn.contains(e.target)) return;
     toggleFullscreen();
   });
 
@@ -593,7 +617,7 @@ document.addEventListener('DOMContentLoaded', () => {
   timelineContainer.addEventListener('pointerup', handlePointerUpTimeline);
   timelineContainer.addEventListener('pointercancel', handlePointerUpTimeline);
 
-  // Keyboard navigation for timeline
+  // Keyboard Navigation for Timeline
   timelineContainer.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft') {
       e.preventDefault();
@@ -611,33 +635,48 @@ document.addEventListener('DOMContentLoaded', () => {
   pipBtn.addEventListener('click', togglePiP);
   checkPiPSupport();
 
-  // Speed Menu Interactions
-  speedBtn.addEventListener('click', (e) => {
+  // Settings Menu Handlers
+  settingsBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    toggleSpeedMenu();
+    toggleSettingsMenu();
   });
 
-  document.querySelectorAll('.speed-option').forEach(option => {
+  settingsCloseBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleSettingsMenu(false);
+  });
+
+  tabSpeed.addEventListener('click', () => switchSettingsTab('speed-options'));
+  tabQuality.addEventListener('click', () => switchSettingsTab('quality-options'));
+
+  document.querySelectorAll('#speed-options .menu-option').forEach(option => {
     option.addEventListener('click', (e) => {
       e.stopPropagation();
       setPlaybackSpeed(parseFloat(option.dataset.speed));
     });
   });
 
-  // Close Speed Menu on Click Outside or Escape Key
+  document.querySelectorAll('#quality-options .menu-option').forEach(option => {
+    option.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setQuality(option.dataset.quality);
+    });
+  });
+
+  // Close Settings on Click Outside or Escape
   document.addEventListener('click', (e) => {
-    if (!speedMenu.contains(e.target) && e.target !== speedBtn) {
-      toggleSpeedMenu(false);
+    if (!settingsMenu.contains(e.target) && e.target !== settingsBtn) {
+      toggleSettingsMenu(false);
     }
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && isSpeedMenuOpen) {
-      toggleSpeedMenu(false);
+    if (e.key === 'Escape' && isSettingsMenuOpen) {
+      toggleSettingsMenu(false);
     }
   });
 
-  // --- Keyboard Shortcuts ---
+  // Global Keyboard Shortcuts
   document.addEventListener('keydown', (e) => {
     const active = document.activeElement;
     if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) {
@@ -677,13 +716,11 @@ document.addEventListener('DOMContentLoaded', () => {
         break;
       case 'j':
         e.preventDefault();
-        video.currentTime = Math.max(0, video.currentTime - 10);
-        showActionFeedback('-10s');
+        rewindTime(10);
         break;
       case 'l':
         e.preventDefault();
-        video.currentTime = Math.min(duration, video.currentTime + 10);
-        showActionFeedback('+10s');
+        forwardTime(10);
         break;
       case 'arrowleft':
         e.preventDefault();
@@ -704,26 +741,6 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         handleVolumeChange(video.volume - 0.1);
         showActionFeedback(`Volume ${Math.round(video.volume * 100)}%`);
-        break;
-      case '<':
-      case ',':
-        if (e.shiftKey || e.key === '<') {
-          e.preventDefault();
-          const speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
-          const currIdx = speeds.indexOf(video.playbackRate);
-          const newIdx = Math.max(0, currIdx - 1);
-          setPlaybackSpeed(speeds[newIdx]);
-        }
-        break;
-      case '>':
-      case '.':
-        if (e.shiftKey || e.key === '>') {
-          e.preventDefault();
-          const speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
-          const currIdx = speeds.indexOf(video.playbackRate);
-          const newIdx = Math.min(speeds.length - 1, currIdx + 1);
-          setPlaybackSpeed(speeds[newIdx]);
-        }
         break;
       case 'home':
         e.preventDefault();
