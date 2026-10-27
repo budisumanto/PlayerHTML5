@@ -1,34 +1,39 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JW Player HTML5 Video Player</title>
+  <title>Aura Player - Liquid Glass HTML5 Video Player</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+  <!-- SVG Refraction Filter for Liquid Glass Edge effect (Chromium progressive enhancement) -->
+  <svg style="display: none;">
+    <defs>
+      <filter id="glass-refraction" x="-10%" y="-10%" width="120%" height="120%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="1" result="noise" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </defs>
+  </svg>
+
   <div class="page-container">
     <header class="header">
-      <h1 class="title">JW Player</h1>
-      <p class="subtitle">Custom Responsive HTML5 Video Player</p>
+      <h1 class="title">Aura Player</h1>
+      <p class="subtitle">Custom HTML5 Video Player • Apple Liquid Glass UI</p>
     </header>
 
     <main class="player-wrapper">
       <div class="video-container" id="video-container" tabindex="0">
         <video id="video-element" preload="metadata" playsinline>
           <source src="sample.mp4" type="video/mp4">
-          Browser anda tidak mendukung HTML5 video.
+          Your browser does not support HTML5 video.
         </video>
 
-        <!-- Top Title Bar Overlay -->
-        <div class="top-title-bar" id="top-title-bar">
-          <span class="video-title" id="video-title">Sora yori mo Tooi Basho - Sample Video</span>
-        </div>
-
-        <!-- Top Action Feedback Overlay -->
+        <!-- Top-Center Action Feedback Toast -->
         <div class="action-feedback-overlay" id="action-feedback" aria-live="polite"></div>
 
         <!-- Touch Seek Ripples / Hints -->
@@ -47,7 +52,7 @@
 
         <!-- Center Overlay (Play/Pause, Replay, Spinner, Error) -->
         <div class="center-overlay" id="center-overlay">
-          <!-- Central Play / Pause Button -->
+          <!-- Central Play / Pause / Replay Button -->
           <button class="central-play-btn" id="central-play-btn" aria-label="Toggle Play">
             <!-- Play Icon -->
             <svg class="icon play-icon" viewBox="0 0 24 24" fill="currentColor">
@@ -72,46 +77,23 @@
           <!-- Video Error State -->
           <div class="error-state hidden" id="error-state">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            <span>Gagal Memuat Video</span>
+            <span>Playback Error</span>
           </div>
         </div>
 
-        <!-- Settings Popup Menu -->
-        <div class="settings-menu hidden" id="settings-menu" role="menu" aria-label="Settings">
-          <div class="settings-header">
-            <span class="settings-title" id="settings-title-text">Settings</span>
-            <button class="settings-close-btn" id="settings-close-btn" aria-label="Close Settings">&times;</button>
-          </div>
-
-          <!-- Sub-menu Tabs / Toggle -->
-          <div class="settings-tabs">
-            <button class="settings-tab active" id="tab-speed" data-target="speed-options">Kecepatan</button>
-            <button class="settings-tab" id="tab-quality" data-target="quality-options">Kualitas</button>
-          </div>
-
-          <!-- Speed Options -->
-          <div class="settings-section" id="speed-options">
-            <button class="menu-option" data-speed="0.5" role="menuitemradio" aria-checked="false">0.5x</button>
-            <button class="menu-option" data-speed="0.75" role="menuitemradio" aria-checked="false">0.75x</button>
-            <button class="menu-option active" data-speed="1.0" role="menuitemradio" aria-checked="true">1x (Normal)</button>
-            <button class="menu-option" data-speed="1.25" role="menuitemradio" aria-checked="false">1.25x</button>
-            <button class="menu-option" data-speed="1.5" role="menuitemradio" aria-checked="false">1.5x</button>
-            <button class="menu-option" data-speed="2.0" role="menuitemradio" aria-checked="false">2x</button>
-          </div>
-
-          <!-- Quality Options -->
-          <div class="settings-section hidden" id="quality-options">
-            <button class="menu-option active" data-quality="auto" role="menuitemradio" aria-checked="true">Auto</button>
-            <button class="menu-option" data-quality="1080p" role="menuitemradio" aria-checked="false">1080p</button>
-            <button class="menu-option" data-quality="720p" role="menuitemradio" aria-checked="false">720p</button>
-            <button class="menu-option" data-quality="480p" role="menuitemradio" aria-checked="false">480p</button>
-            <button class="menu-option" data-quality="360p" role="menuitemradio" aria-checked="false">360p</button>
-          </div>
+        <!-- Playback Speed Menu (Positioned relative to player container, upward) -->
+        <div class="speed-menu hidden" id="speed-menu" role="menu" aria-label="Playback Speed">
+          <button class="speed-option" data-speed="0.5" role="menuitemradio" aria-checked="false">0.5x</button>
+          <button class="speed-option" data-speed="0.75" role="menuitemradio" aria-checked="false">0.75x</button>
+          <button class="speed-option active" data-speed="1.0" role="menuitemradio" aria-checked="true">1x</button>
+          <button class="speed-option" data-speed="1.25" role="menuitemradio" aria-checked="false">1.25x</button>
+          <button class="speed-option" data-speed="1.5" role="menuitemradio" aria-checked="false">1.5x</button>
+          <button class="speed-option" data-speed="2.0" role="menuitemradio" aria-checked="false">2x</button>
         </div>
 
-        <!-- JWPlayer Bottom Control Bar -->
+        <!-- Floating Glass Capsule / Pill Controls Bar -->
         <div class="controls-bar" id="controls-bar">
-          <!-- Timeline / Seekbar -->
+          <!-- Timeline / Progress Bar -->
           <div class="timeline-container" id="timeline-container" role="slider" tabindex="0" aria-label="Seek timeline" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="00:00">
             <div class="timeline-track" id="timeline-track">
               <div class="buffered-bar" id="buffered-bar"></div>
@@ -122,7 +104,7 @@
             <div class="timeline-tooltip" id="timeline-tooltip">00:00</div>
           </div>
 
-          <!-- Controls Row -->
+          <!-- Bottom Control Buttons Row -->
           <div class="controls-row">
             <!-- Left Controls Group -->
             <div class="controls-group left">
@@ -137,22 +119,6 @@
                 <svg class="icon replay-icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M1 4v6h6"></path>
                   <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
-                </svg>
-              </button>
-
-              <!-- Rewind 10s Button -->
-              <button class="control-btn" id="rewind-btn" title="Mundur 10 detik (J / ←)" aria-label="Mundur 10 detik">
-                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
-                  <text x="12" y="14.5" font-size="7" font-weight="bold" text-anchor="middle" fill="currentColor" stroke="none">10</text>
-                </svg>
-              </button>
-
-              <!-- Fast Forward 10s Button -->
-              <button class="control-btn" id="forward-btn" title="Maju 10 detik (L / →)" aria-label="Maju 10 detik">
-                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 5V1l5 5-5 5V7c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6h2c0 4.42-3.58 8-8 8s-8-3.58-8-8 3.58-8 8-8z"/>
-                  <text x="12" y="14.5" font-size="7" font-weight="bold" text-anchor="middle" fill="currentColor" stroke="none">10</text>
                 </svg>
               </button>
 
@@ -184,13 +150,8 @@
 
             <!-- Right Controls Group -->
             <div class="controls-group right">
-              <!-- Settings Gear Button -->
-              <button class="control-btn" id="settings-btn" title="Pengaturan" aria-label="Settings" aria-haspopup="true" aria-expanded="false">
-                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="3"></circle>
-                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                </svg>
-              </button>
+              <!-- Playback Speed Button -->
+              <button class="control-btn speed-btn" id="speed-btn" title="Playback Speed (< >)" aria-label="Playback Speed" aria-haspopup="true" aria-expanded="false">1x</button>
 
               <!-- Picture in Picture Button -->
               <button class="control-btn" id="pip-btn" title="Picture in Picture (P)" aria-label="Picture in Picture" aria-pressed="false">
@@ -201,7 +162,7 @@
               </button>
 
               <!-- Fullscreen Button -->
-              <button class="control-btn" id="fullscreen-btn" title="Layar Penuh (F)" aria-label="Fullscreen" aria-pressed="false">
+              <button class="control-btn" id="fullscreen-btn" title="Fullscreen (F)" aria-label="Fullscreen" aria-pressed="false">
                 <svg class="icon fullscreen-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
                 </svg>
@@ -217,7 +178,7 @@
 
     <footer class="footer">
       <div class="keyboard-hints">
-        <span class="hint-badge"><kbd>Spasi</kbd> / <kbd>K</kbd> Play/Pause</span>
+        <span class="hint-badge"><kbd>Space</kbd> / <kbd>K</kbd> Play/Pause</span>
         <span class="hint-badge"><kbd>J</kbd> / <kbd>L</kbd> ±10s</span>
         <span class="hint-badge"><kbd>←</kbd> <kbd>→</kbd> ±5s</span>
         <span class="hint-badge"><kbd>↑</kbd> <kbd>↓</kbd> Volume</span>
@@ -225,6 +186,7 @@
         <span class="hint-badge"><kbd>M</kbd> Mute</span>
         <span class="hint-badge"><kbd>P</kbd> PiP</span>
         <span class="hint-badge"><kbd>0-9</kbd> Seek %</span>
+        <span class="hint-badge"><kbd>&lt;</kbd> <kbd>&gt;</kbd> Speed</span>
       </div>
     </footer>
   </div>
