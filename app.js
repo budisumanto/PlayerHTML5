@@ -26,7 +26,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const volumeMutedIcon = document.querySelector('.volume-muted-icon');
   const fullscreenOpenIcon = document.querySelector('.fullscreen-open');
   const fullscreenExitIcon = document.querySelector('.fullscreen-exit');
-  const loadingSpinner = document.getElementById('loading-spinner');
   const errorState = document.getElementById('error-state');
   const rippleLeft = document.getElementById('seek-ripple-left');
   const rippleRight = document.getElementById('seek-ripple-right');
@@ -67,15 +66,42 @@ document.addEventListener('DOMContentLoaded', () => {
   let isPointerOverControls = false;
   let isSpeedMenuOpen = false;
 
-  // --- ResizeObserver for Dynamic Controls Bar Height ---
-  if (window.ResizeObserver && controlsBar) {
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const height = entry.contentRect.height;
-        const bottomOffset = container.offsetWidth <= 520 ? 16 : 24;
-        container.style.setProperty('--controls-h', `${Math.round(height + bottomOffset)}px`);
-      }
+  // Loading state debounce timer
+  let loadingDebounceTimeout = null;
+
+  // --- BUG 1: ResizeObserver Observing Container and Controls Bar ---
+  const updateCenterSize = () => {
+    if (!container || !controlsBar) return;
+
+    const containerH = container.clientHeight;
+    const containerW = container.clientWidth || container.offsetWidth;
+    const controlsH = controlsBar.offsetHeight;
+
+    // Compute bottomInset from computed styles or fallback based on container width
+    const computedBottom = parseFloat(window.getComputedStyle(controlsBar).bottom) || (containerW <= 520 ? 8 : 12);
+    const pillTop = containerH - controlsH - computedBottom;
+    const maxSize = 2 * (pillTop - containerH / 2 - 8);
+
+    let defaultSize = 64;
+    if (containerW <= 340) defaultSize = 40;
+    else if (containerW <= 520) defaultSize = 48;
+
+    if (maxSize < 36) {
+      container.classList.add('center-too-small');
+    } else {
+      container.classList.remove('center-too-small');
+    }
+
+    const clampedSize = Math.max(36, Math.min(defaultSize, maxSize));
+    container.style.setProperty('--center-size', `${Math.round(clampedSize)}px`);
+    container.style.setProperty('--controls-h', `${Math.round(controlsH + computedBottom + 12)}px`);
+  };
+
+  if (window.ResizeObserver && container && controlsBar) {
+    const ro = new ResizeObserver(() => {
+      updateCenterSize();
     });
+    ro.observe(container);
     ro.observe(controlsBar);
   }
 
@@ -116,7 +142,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const setControlsVisible = (visible) => {
     clearTimeout(controlsHideTimeout);
 
-    // Rules preventing controls from hiding
     if (!visible) {
       if (video.paused || video.ended) return;
       if (isPointerOverControls) return;
@@ -154,7 +179,6 @@ document.addEventListener('DOMContentLoaded', () => {
     updatePlayPauseState();
   };
 
-  // BUG 1 & BUG 2: Exclusive play/pause/ended state updates
   const updatePlayPauseState = () => {
     if (isScrubbing) return;
 
@@ -166,15 +190,10 @@ document.addEventListener('DOMContentLoaded', () => {
     container.classList.toggle('ended', isEnded);
     container.classList.toggle('is-playing', isPlaying);
 
-    // Exclusive Icon Visibility
-    // 1. Ended -> Replay icon only
-    // 2. Paused -> Play icon only
-    // 3. Playing -> Pause icon only
     playIcons.forEach(icon => icon.classList.toggle('hidden', !isPaused || isEnded));
     pauseIcons.forEach(icon => icon.classList.toggle('hidden', !isPlaying));
     replayIcons.forEach(icon => icon.classList.toggle('hidden', !isEnded));
 
-    // Update ARIA Labels
     let stateLabel = 'Play';
     if (isEnded) stateLabel = 'Replay';
     else if (isPlaying) stateLabel = 'Pause';
@@ -187,6 +206,36 @@ document.addEventListener('DOMContentLoaded', () => {
       setControlsVisible(true);
     } else {
       scheduleControlsHide(1500);
+    }
+  };
+
+  // --- BUG 2: Debounced updateLoading() ---
+  const updateLoading = () => {
+    const isError = !errorState.classList.contains('hidden');
+    const isPausedOrEnded = video.paused || video.ended || isError;
+
+    if (isPausedOrEnded) {
+      clearTimeout(loadingDebounceTimeout);
+      loadingDebounceTimeout = null;
+      container.classList.remove('is-loading');
+      return;
+    }
+
+    const needsLoading = video.seeking || video.readyState < 3;
+
+    if (needsLoading) {
+      if (!loadingDebounceTimeout && !container.classList.contains('is-loading')) {
+        loadingDebounceTimeout = setTimeout(() => {
+          if (!video.paused && !video.ended && (video.seeking || video.readyState < 3)) {
+            container.classList.add('is-loading');
+          }
+          loadingDebounceTimeout = null;
+        }, 200);
+      }
+    } else {
+      clearTimeout(loadingDebounceTimeout);
+      loadingDebounceTimeout = null;
+      container.classList.remove('is-loading');
     }
   };
 
@@ -227,7 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
     volumeSlider.style.background = `linear-gradient(to right, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.9) ${pct}%, rgba(255,255,255,0.2) ${pct}%, rgba(255,255,255,0.2) 100%)`;
   };
 
-  // --- Timeline & Progress Logic (Pointer Events) ---
+  // --- Timeline & Progress Logic ---
   const updateProgress = () => {
     if (!isScrubbing) {
       const current = video.currentTime || 0;
@@ -241,6 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
       timelineContainer.setAttribute('aria-valuetext', `${formatTime(current)} of ${formatTime(duration)}`);
     }
     updateBuffered();
+    updateLoading();
   };
 
   const updateBuffered = () => {
@@ -327,6 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
       video.play().catch(err => console.log('Resume playback failed:', err));
     }
     updatePlayPauseState();
+    updateLoading();
   };
 
   // --- Fullscreen Logic ---
@@ -353,6 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fullscreenOpenIcon.classList.toggle('hidden', isFullscreen);
     fullscreenExitIcon.classList.toggle('hidden', !isFullscreen);
     fullscreenBtn.setAttribute('aria-pressed', isFullscreen ? 'true' : 'false');
+    updateCenterSize();
   };
 
   // --- Picture-in-Picture Logic ---
@@ -374,14 +426,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // --- Playback Speed Logic ---
+  // --- BUG 3: Compact Speed Menu Toggle & Overflow Handling ---
   const toggleSpeedMenu = (open) => {
     isSpeedMenuOpen = typeof open === 'boolean' ? open : speedMenu.classList.contains('hidden');
-    speedMenu.classList.toggle('hidden', !isSpeedMenuOpen);
-    speedBtn.setAttribute('aria-expanded', isSpeedMenuOpen ? 'true' : 'false');
 
     if (isSpeedMenuOpen) {
+      speedMenu.classList.remove('two-col');
+      speedMenu.classList.remove('hidden');
+      speedBtn.setAttribute('aria-expanded', 'true');
       setControlsVisible(true);
+
+      // Check for vertical overflow
+      if (speedMenu.scrollHeight > speedMenu.clientHeight) {
+        speedMenu.classList.add('two-col');
+      }
+
+      // Scroll active item into view
+      const activeOption = speedMenu.querySelector('.speed-option.active');
+      if (activeOption) {
+        activeOption.scrollIntoView({ block: 'nearest' });
+      }
+    } else {
+      speedMenu.classList.add('hidden');
+      speedMenu.classList.remove('two-col');
+      speedBtn.setAttribute('aria-expanded', 'false');
     }
   };
 
@@ -405,42 +473,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // --- Video Event Listeners (BUG 1) ---
+  // --- Video Event Listeners ---
   const handleVideoStateChange = () => {
     updatePlayPauseState();
+    updateLoading();
   };
 
   video.addEventListener('play', handleVideoStateChange);
   video.addEventListener('pause', handleVideoStateChange);
   video.addEventListener('playing', () => {
-    loadingSpinner.classList.add('hidden');
     errorState.classList.add('hidden');
-    centralPlayBtn.classList.remove('hidden');
     handleVideoStateChange();
   });
   video.addEventListener('ended', handleVideoStateChange);
-  video.addEventListener('seeked', () => {
-    loadingSpinner.classList.add('hidden');
-    handleVideoStateChange();
-  });
-  video.addEventListener('canplay', () => {
-    loadingSpinner.classList.add('hidden');
-    handleVideoStateChange();
-  });
+  video.addEventListener('seeking', updateLoading);
+  video.addEventListener('seeked', handleVideoStateChange);
+  video.addEventListener('canplay', handleVideoStateChange);
+  video.addEventListener('waiting', updateLoading);
   video.addEventListener('loadeddata', handleVideoStateChange);
 
-  video.addEventListener('waiting', () => {
-    loadingSpinner.classList.remove('hidden');
-  });
-
-  video.addEventListener('stalled', () => {
-    if (video.paused) loadingSpinner.classList.add('hidden');
-  });
-
   video.addEventListener('error', () => {
-    loadingSpinner.classList.add('hidden');
-    centralPlayBtn.classList.add('hidden');
     errorState.classList.remove('hidden');
+    handleVideoStateChange();
     setControlsVisible(true);
   });
 
@@ -460,24 +514,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateVolumeUI();
     updateProgress();
+    updateCenterSize();
   });
 
   // --- Event Listeners ---
 
-  // Central Overlay Click
   centralPlayBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     togglePlay();
   });
 
-  // Controls Row Buttons
   playPauseBtn.addEventListener('click', togglePlay);
   muteBtn.addEventListener('click', toggleMute);
   volumeSlider.addEventListener('input', (e) => {
     handleVolumeChange(parseFloat(e.target.value));
   });
 
-  // BUG 3: Pointer tracking
   container.addEventListener('pointerdown', (e) => {
     lastPointerType = e.pointerType;
     pointerDownX = e.clientX;
@@ -489,7 +541,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Desktop Hover & Controls Auto-Hide (Mouse/Pen ONLY)
   container.addEventListener('pointermove', (e) => {
     if (e.pointerType !== 'mouse' && e.pointerType !== 'pen') return;
     setControlsVisible(true);
@@ -516,20 +567,16 @@ document.addEventListener('DOMContentLoaded', () => {
     scheduleControlsHide(1500);
   });
 
-  // Touch PointerUp handling for video area tap
   container.addEventListener('pointerup', (e) => {
     if (e.pointerType !== 'touch') return;
 
-    // Ignore if finger moved >10px (e.g. scrubbing or scrolling)
     const moveDist = Math.hypot(e.clientX - pointerDownX, e.clientY - pointerDownY);
     if (moveDist > 10) return;
 
-    // Ignore if tapped inside controls bar, speed menu, or central play button
     if (controlsBar.contains(e.target) || speedMenu.contains(e.target) || centralPlayBtn.contains(e.target)) {
       return;
     }
 
-    // Touch tap on video: toggle controls visibility instantly
     const isCurrentlyHidden = container.classList.contains('controls-hidden');
     if (isCurrentlyHidden) {
       setControlsVisible(true);
@@ -539,7 +586,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Desktop Video Area Click (Mouse ONLY)
   container.addEventListener('click', (e) => {
     if (lastPointerType !== 'mouse') return;
     if (controlsBar.contains(e.target) || speedMenu.contains(e.target) || centralPlayBtn.contains(e.target)) return;
@@ -548,7 +594,6 @@ document.addEventListener('DOMContentLoaded', () => {
     showActionFeedback(video.paused ? 'Paused' : 'Playing');
   });
 
-  // Touch Double-Tap to Seek ±10s
   container.addEventListener('touchend', (e) => {
     if (controlsBar.contains(e.target) || speedMenu.contains(e.target) || centralPlayBtn.contains(e.target)) return;
 
@@ -558,7 +603,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const relativeX = tapX - containerRect.left;
 
     if (currentTime - lastTapTime < 300 && Math.abs(tapX - lastTapX) < 40) {
-      // Restore controls visibility to state before the first tap
       if (wasHiddenBeforeTap) {
         setControlsVisible(false);
       } else {
@@ -580,20 +624,17 @@ document.addEventListener('DOMContentLoaded', () => {
     lastTapX = tapX;
   });
 
-  // Double Click on Desktop Video Area -> Fullscreen
   container.addEventListener('dblclick', (e) => {
     if (lastPointerType !== 'mouse') return;
     if (controlsBar.contains(e.target) || speedMenu.contains(e.target) || centralPlayBtn.contains(e.target)) return;
     toggleFullscreen();
   });
 
-  // Timeline Pointer Events
   timelineContainer.addEventListener('pointerdown', handlePointerDownTimeline);
   timelineContainer.addEventListener('pointermove', handlePointerMoveTimeline);
   timelineContainer.addEventListener('pointerup', handlePointerUpTimeline);
   timelineContainer.addEventListener('pointercancel', handlePointerUpTimeline);
 
-  // Keyboard navigation for timeline
   timelineContainer.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft') {
       e.preventDefault();
@@ -604,14 +645,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Fullscreen & PiP Events
   fullscreenBtn.addEventListener('click', toggleFullscreen);
   document.addEventListener('fullscreenchange', updateFullscreenUI);
   document.addEventListener('webkitfullscreenchange', updateFullscreenUI);
   pipBtn.addEventListener('click', togglePiP);
   checkPiPSupport();
 
-  // Speed Menu Interactions
   speedBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     toggleSpeedMenu();
@@ -624,7 +663,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Close Speed Menu on Click Outside or Escape Key
   document.addEventListener('click', (e) => {
     if (!speedMenu.contains(e.target) && e.target !== speedBtn) {
       toggleSpeedMenu(false);
@@ -749,4 +787,5 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Initial Setup ---
   updatePlayPauseState();
   updateVolumeUI();
+  updateCenterSize();
 });

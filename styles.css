@@ -3,19 +3,15 @@
 :root {
   --bg-gradient-start: #090d16;
   --bg-gradient-end: #121829;
-  --accent-color: #6366f1;
-  --accent-color-hover: #4f46e5;
-  --accent-glow: rgba(99, 102, 241, 0.4);
+  --accent-color: #ffffff;
+  --accent-glow: rgba(255, 255, 255, 0.3);
 
   --text-main: #ffffff;
-  --text-muted: rgba(255, 255, 255, 0.65);
+  --text-muted: rgba(255, 255, 255, 0.85);
   --text-dim: rgba(255, 255, 255, 0.45);
 
-  /* Glass Material Variables */
-  --glass-bg: rgba(20, 20, 28, 0.25);
-  --glass-tint: rgba(255, 255, 255, 0.14);
-  --glass-bg-hover: rgba(255, 255, 255, 0.22);
-  --glass-bg-active: rgba(255, 255, 255, 0.3);
+  /* BUG 4: One shared glass fill everywhere */
+  --glass-fill: linear-gradient(rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.04)), rgba(20, 20, 28, 0.30);
   --glass-border: rgba(255, 255, 255, 0.18);
   --glass-border-light: rgba(255, 255, 255, 0.28);
   --glass-blur: blur(20px) saturate(120%);
@@ -24,6 +20,8 @@
 
   --pill-radius: 20px;
   --btn-radius: 50%;
+
+  --center-size: 64px;
 
   --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
   --transition-smooth: 200ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -136,7 +134,7 @@ body {
   top: 16px;
   left: 50%;
   transform: translateX(-50%) translateY(-10px) scale(0.95);
-  background: var(--glass-bg);
+  background: var(--glass-fill);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
@@ -194,22 +192,26 @@ body {
   backdrop-filter: blur(8px);
 }
 
-/* Center Overlay (Play/Pause, Spinner, Error, Replay) */
+/* BUG 1: Center Overlay is truly centered using CSS Grid */
 .center-overlay {
   position: absolute;
-  inset: 0 0 var(--controls-h, 70px) 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  inset: 0;
+  display: grid;
+  place-items: center;
   pointer-events: none;
   z-index: 10;
 }
 
+.center-overlay > * {
+  grid-area: 1 / 1;
+}
+
+/* Central Play/Pause/Replay Button */
 .central-play-btn {
-  width: 64px;
-  height: 64px;
+  width: var(--center-size, 64px);
+  height: var(--center-size, 64px);
   border-radius: 50%;
-  background: var(--glass-tint);
+  background: var(--glass-fill);
   border: 1px solid var(--glass-border);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
@@ -222,19 +224,21 @@ body {
   opacity: 0;
   pointer-events: none;
   transform: scale(0.9);
-  transition: transform var(--transition-fast), opacity var(--transition-fast), background var(--transition-fast);
+  transition: transform var(--transition-fast), opacity var(--transition-fast);
 }
 
-/* BUG 4: Show central button whenever controls are visible */
 .video-container:not(.controls-hidden) .central-play-btn {
   opacity: 1;
   pointer-events: auto;
   transform: scale(1);
 }
 
+.video-container.center-too-small .central-play-btn {
+  display: none !important;
+}
+
 @media (hover: hover) {
   .central-play-btn:hover {
-    background: var(--glass-bg-hover);
     border-color: var(--glass-border-light);
     transform: scale(1.08) !important;
   }
@@ -245,24 +249,59 @@ body {
 }
 
 .central-play-btn .icon {
-  width: 28px;
-  height: 28px;
+  width: 45%;
+  height: 45%;
+  transition: opacity var(--transition-fast);
 }
 
-/* Loading Spinner */
+/* BUG 1: Optical centering for play icon only */
+.central-play-btn .play-icon {
+  transform: translateX(6%);
+}
+
+.central-play-btn .pause-icon,
+.central-play-btn .replay-icon {
+  transform: none;
+}
+
+/* BUG 2: When .is-loading, hide central button icons */
+.video-container.is-loading .central-play-btn .icon {
+  opacity: 0 !important;
+}
+
+/* BUG 2: Loading Spinner stacked in same grid cell, same size & glass fill */
 .loading-spinner {
+  width: var(--center-size, 64px);
+  height: var(--center-size, 64px);
+  border-radius: 50%;
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow);
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+  z-index: 11;
+}
+
+.video-container.is-loading .loading-spinner {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .spinner-ring {
-  width: 48px;
-  height: 48px;
-  border: 4px solid rgba(255, 255, 255, 0.2);
+  width: 65%;
+  height: 65%;
+  border: 3px solid rgba(255, 255, 255, 0.25);
   border-top-color: #ffffff;
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+  animation: spin 1.6s linear infinite;
+  transform-origin: 50% 50%;
 }
 
 @keyframes spin {
@@ -274,14 +313,16 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(220, 38, 38, 0.3);
+  background: rgba(220, 38, 38, 0.35);
   border: 1px solid rgba(239, 68, 68, 0.4);
   backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   color: #fff;
   padding: 10px 18px;
   border-radius: 12px;
   font-size: 0.85rem;
   font-weight: 500;
+  pointer-events: auto;
 }
 
 .error-state .icon {
@@ -289,13 +330,13 @@ body {
   height: 20px;
 }
 
-/* Liquid Glass Capsule / Pill Controls Bar */
+/* BUG 4: Shared Glass Capsule Controls Bar */
 .controls-bar {
   position: absolute;
   bottom: 12px;
   left: 12px;
   right: 12px;
-  background: var(--glass-bg);
+  background: var(--glass-fill);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
@@ -426,7 +467,7 @@ body {
   gap: 6px;
 }
 
-/* Control Buttons (Soft Glass Circles) */
+/* Control Buttons */
 .control-btn {
   background: transparent;
   border: none;
@@ -445,19 +486,19 @@ body {
 
 @media (hover: hover) {
   .control-btn:hover {
-    background: var(--glass-bg-hover);
+    background: rgba(255, 255, 255, 0.15);
     color: #fff;
   }
 }
 
 .control-btn:active {
   transform: scale(0.94);
-  background: var(--glass-bg-active);
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .control-btn:focus-visible,
 .timeline-container:focus-visible {
-  outline: 2px solid var(--accent-color);
+  outline: 2px solid #ffffff;
   outline-offset: 2px;
 }
 
@@ -470,7 +511,7 @@ body {
   display: none !important;
 }
 
-/* Volume Control Container - Reserved Width Popover/Overlay without layout shifts */
+/* Volume Control Container */
 .volume-container {
   display: flex;
   align-items: center;
@@ -544,7 +585,7 @@ body {
   opacity: 0.5;
 }
 
-/* Speed Selector Menu (Sibling element opening upward relative to player container) */
+/* BUG 3: Compact Vertical Speed Menu Popover */
 .speed-btn {
   font-size: 0.8rem;
   font-weight: 600;
@@ -552,16 +593,19 @@ body {
 }
 
 .speed-btn[aria-expanded="true"] {
-  background: var(--glass-bg-hover);
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .speed-menu {
   position: absolute;
   bottom: calc(var(--controls-h, 70px) + 8px);
   right: 12px;
+  width: 100px;
   max-height: calc(100% - var(--controls-h, 70px) - 16px);
   overflow-y: auto;
-  background: var(--glass-bg);
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  background: var(--glass-fill);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
@@ -572,14 +616,41 @@ body {
   flex-direction: column;
   gap: 2px;
   z-index: 35;
-  min-width: 110px;
+  transform-origin: bottom right;
+  transition: opacity 150ms ease, transform 150ms ease, visibility 150ms ease;
+}
+
+.speed-menu::-webkit-scrollbar {
+  display: none;
+}
+
+.speed-menu.hidden {
+  opacity: 0 !important;
+  transform: scale(0.96) !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+.speed-menu:not(.hidden) {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+  visibility: visible;
+}
+
+.speed-menu.two-col {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  width: auto;
+  gap: 4px;
 }
 
 .speed-option {
   background: transparent;
   border: none;
   color: var(--text-muted);
-  padding: 6px 12px;
+  height: 32px;
+  padding: 0 10px;
   border-radius: 8px;
   font-size: 0.78rem;
   font-weight: 500;
@@ -593,7 +664,7 @@ body {
 
 @media (hover: hover) {
   .speed-option:hover {
-    background: var(--glass-bg-hover);
+    background: rgba(255, 255, 255, 0.15);
     color: #fff;
   }
 }
@@ -644,6 +715,9 @@ kbd {
 
 /* Container Queries for Overlap/Collision Prevention */
 @container player (max-width: 520px) {
+  :root, .video-container {
+    --center-size: 48px;
+  }
   .volume-slider-wrapper {
     display: none !important;
   }
@@ -662,28 +736,13 @@ kbd {
     height: 34px;
     min-width: 34px;
   }
-  .central-play-btn {
-    width: 48px;
-    height: 48px;
-  }
-  .central-play-btn .icon {
-    width: 22px;
-    height: 22px;
-  }
   .speed-menu {
-    flex-direction: row;
-    min-width: auto;
     right: 8px;
-    left: 8px;
-    justify-content: space-between;
-    padding: 4px;
+    bottom: calc(var(--controls-h, 60px) + 6px);
   }
   .speed-option {
-    padding: 4px 8px;
+    height: 28px;
     font-size: 0.75rem;
-  }
-  .speed-option.active::after {
-    display: none;
   }
 }
 
@@ -697,20 +756,15 @@ kbd {
 }
 
 @container player (max-width: 340px) {
+  :root, .video-container {
+    --center-size: 40px;
+  }
   .speed-btn {
     font-size: 0.72rem;
     width: 32px;
   }
   .time-separator, #duration-time {
     display: none;
-  }
-  .central-play-btn {
-    width: 40px;
-    height: 40px;
-  }
-  .central-play-btn .icon {
-    width: 18px;
-    height: 18px;
   }
 }
 
@@ -733,21 +787,22 @@ kbd {
 
 /* Accessibility & Preferences Fallbacks */
 @supports not (backdrop-filter: blur(1px)) {
-  .controls-bar, .speed-menu, .central-play-btn, .action-feedback-overlay {
-    background: rgba(15, 20, 30, 0.95);
+  .controls-bar, .speed-menu, .central-play-btn, .loading-spinner, .action-feedback-overlay {
+    background: rgba(20, 25, 38, 0.95);
   }
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  .controls-bar, .speed-menu, .central-play-btn, .action-feedback-overlay {
-    background: rgba(15, 20, 30, 0.98);
+  .controls-bar, .speed-menu, .central-play-btn, .loading-spinner, .action-feedback-overlay {
+    background: rgba(20, 25, 38, 0.98);
     backdrop-filter: none;
   }
 }
 
+/* BUG 2: Reduced Motion rule preserves spinner rotation */
 @media (prefers-reduced-motion: reduce) {
-  * {
-    animation-duration: 0.01ms !important;
+  *:not(.spinner-ring) {
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
