@@ -501,7 +501,7 @@ document.addEventListener('DOMContentLoaded', () => {
   video.addEventListener('timeupdate', updateProgress);
   video.addEventListener('progress', updateBuffered);
 
-  video.addEventListener('loadedmetadata', () => {
+  const initMetadata = () => {
     durationTimeEl.textContent = formatTime(video.duration);
 
     const savedVol = localStorage.getItem(STORAGE_KEY_VOLUME);
@@ -515,7 +515,17 @@ document.addEventListener('DOMContentLoaded', () => {
     updateVolumeUI();
     updateProgress();
     updateCenterSize();
+  };
+
+  video.addEventListener('loadedmetadata', initMetadata);
+  video.addEventListener('durationchange', () => {
+    durationTimeEl.textContent = formatTime(video.duration);
+    updateProgress();
   });
+
+  if (video.readyState >= 1) {
+    initMetadata();
+  }
 
   // --- Event Listeners ---
 
