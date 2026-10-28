@@ -61,6 +61,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 800);
   };
 
+  const initMetadata = () => {
+    if (video.duration) {
+      durationTimeEl.textContent = formatTime(video.duration);
+      if (timelineContainer) {
+        timelineContainer.setAttribute('aria-valuemax', Math.floor(video.duration));
+      }
+    }
+    updateVolumeUI();
+  };
+
   // --- Play / Pause Logic ---
   const togglePlay = () => {
     if (video.paused) {
@@ -106,9 +116,8 @@ document.addEventListener('DOMContentLoaded', () => {
       volumeSlider.value = 0;
     }
 
-    // Gradient background for slider input
     const percentage = (volumeSlider.value / 1) * 100;
-    volumeSlider.style.background = `linear-gradient(to right, var(--primary-accent) 0%, var(--primary-accent) ${percentage}%, rgba(255,255,255,0.25) ${percentage}%, rgba(255,255,255,0.25) 100%)`;
+    volumeSlider.style.background = `linear-gradient(to right, #ffffff 0%, #ffffff ${percentage}%, rgba(255,255,255,0.25) ${percentage}%, rgba(255,255,255,0.25) 100%)`;
   };
 
   // --- Timeline & Progress Logic ---
@@ -224,10 +233,12 @@ document.addEventListener('DOMContentLoaded', () => {
   video.addEventListener('timeupdate', updateProgress);
   video.addEventListener('progress', updateBuffered);
 
-  video.addEventListener('loadedmetadata', () => {
-    durationTimeEl.textContent = formatTime(video.duration);
-    updateVolumeUI();
-  });
+  video.addEventListener('loadedmetadata', initMetadata);
+  video.addEventListener('durationchange', initMetadata);
+
+  if (video.readyState >= 1) {
+    initMetadata();
+  }
 
   video.addEventListener('click', () => {
     togglePlay();
@@ -336,7 +347,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Keyboard Shortcuts
   container.addEventListener('keydown', (e) => {
-    // Ignore if typing in input or button focused
     if (e.target.tagName === 'INPUT') return;
 
     switch (e.key.toLowerCase()) {

@@ -23,12 +23,12 @@
       border-radius: 8px; padding: 10px; font: inherit; font-size: 0.85rem;
     }
     .btn {
-      background: var(--primary-accent); color: #fff; border: none;
+      background: var(--primary-accent, #ffffff); color: #000; border: none;
       border-radius: 8px; padding: 10px 16px; font: inherit;
       font-weight: 600; cursor: pointer;
     }
-    .btn:hover { background: var(--primary-accent-hover); }
-    .btn.ghost { background: rgba(255,255,255,0.1); }
+    .btn:hover { opacity: 0.9; }
+    .btn.ghost { background: rgba(255,255,255,0.1); color: #fff; }
     .stats {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -38,7 +38,7 @@
       background: rgba(0,0,0,0.25); border-radius: 8px;
       padding: 8px 10px; font-size: 0.8rem;
     }
-    .stat span { display: block; color: var(--text-muted); font-size: 0.7rem; }
+    .stat span { display: block; color: var(--text-muted, #71717a); font-size: 0.7rem; }
     .stat b { font-variant-numeric: tabular-nums; }
     .log {
       height: 180px; overflow-y: auto;
@@ -46,7 +46,7 @@
       padding: 8px; font-family: ui-monospace, monospace; font-size: 0.75rem;
     }
     .log div { padding: 1px 0; color: #cbd5e1; }
-    .log .err { color: #f87171; }
+    .log .err { color: #ef4444; }
     .log .ok { color: #4ade80; }
     .checklist { list-style: none; display: grid; gap: 6px; font-size: 0.85rem; }
     .checklist label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
@@ -77,10 +77,26 @@
           Your browser does not support HTML5 video.
         </video>
 
-        <button class="central-play-btn" id="central-play-btn" aria-label="Toggle Play">
-          <svg class="icon play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-          <svg class="icon pause-icon hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-        </button>
+        <div class="center-overlay" id="center-overlay">
+          <button class="central-play-btn" id="central-play-btn" aria-label="Toggle Play">
+            <svg class="icon play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            <svg class="icon pause-icon hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+            <svg class="icon replay-icon hidden" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+            </svg>
+          </button>
+          <div class="loading-spinner hidden" id="loading-spinner"></div>
+          <div class="seek-ripple seek-ripple-left hidden" id="seek-ripple-left"></div>
+          <div class="seek-ripple seek-ripple-right hidden" id="seek-ripple-right"></div>
+          <div class="error-state hidden" id="error-state">
+            <svg class="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <span>Playback Error</span>
+          </div>
+        </div>
 
         <div class="action-feedback-overlay" id="action-feedback"></div>
 
@@ -205,10 +221,8 @@
     </section>
   </div>
 
-  <!-- Script player asli lu -->
   <script src="app.js"></script>
 
-  <!-- Script khusus testing -->
   <script>
     (() => {
       const v = document.getElementById('video-element');
@@ -226,7 +240,6 @@
         if (logEl.children.length > 200) logEl.removeChild(logEl.firstChild);
       };
 
-      // Event yang dicatat (timeupdate sengaja dikecualikan biar log gak banjir)
       ['loadstart', 'loadedmetadata', 'canplay', 'playing', 'play', 'pause',
        'seeking', 'seeked', 'waiting', 'stalled', 'ended', 'ratechange',
        'enterpictureinpicture', 'leavepictureinpicture'
@@ -252,7 +265,6 @@
       document.addEventListener('fullscreenchange', () =>
         log('fullscreen → ' + (document.fullscreenElement ? 'ON' : 'OFF')));
 
-      // Live stats
       const readyNames = ['HAVE_NOTHING', 'HAVE_METADATA', 'HAVE_CURRENT_DATA', 'HAVE_FUTURE_DATA', 'HAVE_ENOUGH_DATA'];
       const updateStats = () => {
         $('s-state').textContent = v.ended ? 'Ended' : v.paused ? 'Paused' : 'Playing';
@@ -272,7 +284,6 @@
       setInterval(updateStats, 250);
       updateStats();
 
-      // Load URL baru
       $('load-btn').addEventListener('click', () => {
         const url = $('url-input').value.trim();
         if (!url) return;
