@@ -1,12 +1,13 @@
-/* CSS Styles for Aura Player - Minimal Flat Theme */
+/* CSS Styles for Aura Player - JW Player 8+ Inspired Theme */
 
 :root {
   --bg-page: #0a0a0c;
   --text-main: #ffffff;
   --text-muted: rgba(255, 255, 255, 0.6);
+  --accent-red: #ff0000;
   --error-color: #ef4444;
 
-  --center-size: 64px;
+  --center-size: 72px;
 
   --transition-fast: 150ms cubic-bezier(0.16, 1, 0.3, 1);
   --transition-smooth: 200ms cubic-bezier(0.16, 1, 0.3, 1);
@@ -39,7 +40,7 @@ body {
   gap: 20px;
 }
 
-/* Page Header: small, left-aligned title (1.25rem, weight 600) with muted one-line subtitle */
+/* Page Header */
 .header {
   text-align: left;
 }
@@ -64,8 +65,7 @@ body {
   justify-content: center;
 }
 
-/* Container Queries enabled on player container */
-/* Player: radius 12px, no heavy shadow (only 1px rgba(255,255,255,.08) outline). Keep 16/9 aspect ratio */
+/* Player Container: radius 8px (0 in fullscreen), 1px rgba(255,255,255,.08) outline, no shadow */
 .video-container {
   container-type: inline-size;
   container-name: player;
@@ -73,7 +73,7 @@ body {
   width: 100%;
   aspect-ratio: 16 / 9;
   background-color: #000;
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
   outline: none;
@@ -93,7 +93,7 @@ body {
   cursor: none;
 }
 
-/* Action Feedback Toast (top-center): solid rgba(0,0,0,.7) rounded label, small text */
+/* Action Feedback Toast (top-center): plain rgba(0,0,0,.7) rounded label */
 .action-feedback-overlay {
   position: absolute;
   top: 16px;
@@ -166,13 +166,13 @@ body {
   grid-area: 1 / 1;
 }
 
-/* Center button: solid rgba(0,0,0,.55) circle, 1px rgba(255,255,255,.15) border, white icon */
+/* Center button: NO circle, no background, no border, no backdrop-filter. Big white icon with drop-shadow */
 .central-play-btn {
-  width: var(--center-size, 64px);
-  height: var(--center-size, 64px);
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  width: var(--center-size, 72px);
+  height: var(--center-size, 72px);
+  border-radius: 0;
+  background: transparent;
+  border: none;
   color: #fff;
   display: flex;
   align-items: center;
@@ -182,6 +182,7 @@ body {
   pointer-events: none;
   transform: scale(0.9);
   transition: transform var(--transition-fast), opacity var(--transition-fast);
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
 }
 
 .video-container:not(.controls-hidden) .central-play-btn {
@@ -196,19 +197,19 @@ body {
 
 @media (hover: hover) {
   .central-play-btn:hover {
-    background: rgba(0, 0, 0, 0.7);
-    border-color: rgba(255, 255, 255, 0.3);
-    transform: scale(1.05) !important;
+    background: transparent;
+    border: none;
+    transform: scale(1.08) !important;
   }
 }
 
 .central-play-btn:active {
-  transform: scale(0.94) !important;
+  transform: scale(0.92) !important;
 }
 
 .central-play-btn .icon {
-  width: 45%;
-  height: 45%;
+  width: 100%;
+  height: 100%;
   transition: opacity var(--transition-fast);
 }
 
@@ -226,13 +227,13 @@ body {
   opacity: 0 !important;
 }
 
-/* Spinner: same circle with a 3px ring (rgba(255,255,255,.25) track, white arc) */
+/* Spinner: plain white ring (3px, rgba(255,255,255,.25) track, white arc) of size ~70% of --center-size, no disc, no border */
 .loading-spinner {
-  width: var(--center-size, 64px);
-  height: var(--center-size, 64px);
+  width: calc(var(--center-size, 72px) * 0.7);
+  height: calc(var(--center-size, 72px) * 0.7);
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: transparent;
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -249,8 +250,8 @@ body {
 }
 
 .spinner-ring {
-  width: 55%;
-  height: 55%;
+  width: 100%;
+  height: 100%;
   border: 3px solid rgba(255, 255, 255, 0.25);
   border-top-color: #ffffff;
   border-radius: 50%;
@@ -262,7 +263,7 @@ body {
   to { transform: rotate(360deg); }
 }
 
-/* Error state: solid dark card with a red (#ef4444) icon and text */
+/* Error state */
 .error-state {
   display: flex;
   align-items: center;
@@ -271,7 +272,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--error-color);
   padding: 10px 18px;
-  border-radius: 10px;
+  border-radius: 6px;
   font-size: 0.85rem;
   font-weight: 500;
   pointer-events: auto;
@@ -283,23 +284,30 @@ body {
   stroke: var(--error-color);
 }
 
-/* Controls: a full-width bar glued to the bottom edge (no inset, no pill, no border radius). */
-/* Background: a simple vertical gradient scrim (transparent -> rgba(0,0,0,.75)), not blur. */
-/* Layout: thin timeline on top, buttons row under it, padding 8px 14px 10px (6px 10px 8px at <=520px). */
+/* Controls bar: full-width, flush with bottom, no radius, no blur. Gradient transparent -> rgba(0,0,0,.8) with taller ::before inset: -28px 0 0 0 */
 .controls-bar {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.75) 0%, transparent 100%);
-  padding: 8px 14px 10px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 60%, transparent 100%);
+  padding: 0 18px 8px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
   opacity: 1;
   transform: translateY(0);
   transition: opacity var(--transition-smooth), transform var(--transition-smooth);
   z-index: 25;
+}
+
+.controls-bar::before {
+  content: '';
+  position: absolute;
+  inset: -28px 0 0 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: -1;
 }
 
 .video-container.controls-hidden .controls-bar {
@@ -308,11 +316,11 @@ body {
   pointer-events: none !important;
 }
 
-/* Timeline: 3px track (rgba(255,255,255,.25)), buffered layer rgba(255,255,255,.4), progress fill solid white. Grows to 5px on hover/drag. Thumb = 12px solid white circle, visible on hover/drag/focus. Tooltip = small solid #18181b rounded 6px label, clamped inside the track. */
+/* Progress: sits on top of row, full width inside padding. Touch area 24px tall, visible track 4px (6px on hover/drag/focus), fill red */
 .timeline-container {
   position: relative;
   width: 100%;
-  height: 14px;
+  height: 24px;
   display: flex;
   align-items: center;
   cursor: pointer;
@@ -323,9 +331,9 @@ body {
 .timeline-track {
   position: relative;
   width: 100%;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.25);
-  border-radius: 2px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 0;
   overflow: visible;
   transition: height var(--transition-fast);
 }
@@ -333,7 +341,7 @@ body {
 .timeline-container:hover .timeline-track,
 .timeline-container:focus-visible .timeline-track,
 .timeline-container.dragging .timeline-track {
-  height: 5px;
+  height: 6px;
 }
 
 .buffered-bar {
@@ -341,8 +349,8 @@ body {
   top: 0;
   left: 0;
   height: 100%;
-  background: rgba(255, 255, 255, 0.4);
-  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.35);
+  border-radius: 0;
   width: 0%;
 }
 
@@ -351,11 +359,12 @@ body {
   top: 0;
   left: 0;
   height: 100%;
-  background: #ffffff;
-  border-radius: 2px;
+  background: var(--accent-red);
+  border-radius: 0;
   width: 0%;
 }
 
+/* Thumb: 12px red circle, visible only on hover/drag/focus */
 .progress-thumb {
   position: absolute;
   right: -6px;
@@ -364,7 +373,7 @@ body {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: #ffffff;
+  background: var(--accent-red);
   transition: transform var(--transition-fast);
 }
 
@@ -374,22 +383,22 @@ body {
   transform: translateY(-50%) scale(1);
 }
 
-/* Tooltip = small solid #18181b rounded 6px label, clamped inside the track */
+/* Tooltip: small rgba(0,0,0,.85) label, no border, clamped inside track */
 .timeline-tooltip {
   position: absolute;
-  bottom: 20px;
+  bottom: 26px;
   transform: translateX(-50%);
-  background: #18181b;
+  background: rgba(0, 0, 0, 0.85);
   color: #ffffff;
-  padding: 3px 7px;
-  border-radius: 6px;
+  padding: 3px 6px;
+  border-radius: 2px;
   font-size: 0.75rem;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   pointer-events: none;
   opacity: 0;
   transition: opacity var(--transition-fast);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: none;
   white-space: nowrap;
   z-index: 30;
 }
@@ -410,34 +419,36 @@ body {
 .controls-group {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
 }
 
-/* Buttons: icon-only, white, 36px (34px at <=520px), circular hover background rgba(255,255,255,.12) (only inside @media (hover: hover)), :active scale(.94), visible :focus-visible ring (2px white). */
+/* Buttons: icon-only, no background, no circle. Hit area 44px, icon 26px */
 .control-btn {
   background: transparent;
   border: none;
-  color: #ffffff;
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
-  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.9);
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   outline: none;
-  transition: background var(--transition-fast), transform var(--transition-fast);
+  position: relative;
+  transition: color var(--transition-fast), transform var(--transition-fast);
 }
 
 @media (hover: hover) {
   .control-btn:hover {
-    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    background: transparent;
   }
 }
 
 .control-btn:active {
-  transform: scale(0.94);
+  transform: scale(0.92);
 }
 
 .control-btn:focus-visible,
@@ -447,8 +458,8 @@ body {
 }
 
 .control-btn .icon {
-  width: 20px;
-  height: 20px;
+  width: 26px;
+  height: 26px;
 }
 
 .hidden {
@@ -509,11 +520,11 @@ body {
   border: none;
 }
 
-/* Typography: Inter, tabular numbers for time, sizes 0.8rem for time / 0.75rem for menus. */
+/* Time Display: 14px, tabular numbers, separator with 8px side margins */
 .time-display {
-  font-size: 0.8rem;
+  font-size: 14px;
   font-weight: 500;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.9);
   font-variant-numeric: tabular-nums;
   margin-left: 4px;
   white-space: nowrap;
@@ -524,103 +535,215 @@ body {
 }
 
 .time-separator {
-  margin: 0 2px;
+  margin: 0 8px;
   opacity: 0.6;
 }
 
-/* Speed menu: small solid dark card (#18181b, 1px rgba(255,255,255,.1) border, radius 10px), vertical list, white text, active item = white text + rgba(255,255,255,.12) background + small dot. No blur. */
-.speed-btn {
-  font-size: 0.8rem;
-  font-weight: 600;
-  width: 36px;
+/* Settings gear active bar: show a 2px x 22px white bar under gear icon (#speed-btn[aria-expanded="true"]::after) */
+#speed-btn[aria-expanded="true"]::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 22px;
+  height: 2px;
+  background-color: #ffffff;
 }
 
-.speed-btn[aria-expanded="true"] {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.speed-menu {
+/* Settings Menu (the panel): right-aligned to progress bar right end, sitting ~6px above progress bar */
+.speed-menu,
+.settings-menu {
   position: absolute;
   bottom: calc(var(--controls-h, 50px) + 6px);
-  right: 14px;
-  width: 100px;
+  right: 18px;
+  width: 228px;
+  max-width: calc(100% - 24px);
   max-height: calc(100% - var(--controls-h, 50px) - 12px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: none;
-  background: #18181b;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  padding: 4px;
+  background: #1c1c1c;
+  border-radius: 2px;
+  border: none;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
   z-index: 35;
-  transform-origin: bottom right;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   transition: opacity 150ms ease, transform 150ms ease, visibility 150ms ease;
+  overflow: hidden;
 }
 
-.speed-menu::-webkit-scrollbar {
-  display: none;
-}
-
-.speed-menu.hidden {
+.speed-menu.hidden,
+.settings-menu.hidden {
   opacity: 0 !important;
-  transform: scale(0.96) !important;
+  transform: translateY(6px) !important;
   pointer-events: none !important;
   visibility: hidden !important;
 }
 
-.speed-menu:not(.hidden) {
+.speed-menu:not(.hidden),
+.settings-menu:not(.hidden) {
   opacity: 1;
-  transform: scale(1);
+  transform: translateY(0);
   pointer-events: auto;
   visibility: visible;
 }
 
-.speed-menu.two-col {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  width: auto;
-  gap: 4px;
+/* Settings Header: bg #1c1c1c, height 44px, 3 tabs on left, X on right */
+.settings-header {
+  height: 44px;
+  background: #1c1c1c;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.speed-option {
+.settings-tabs {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.settings-tab {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  height: 100%;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  outline: none;
+}
+
+.settings-tab .icon {
+  width: 20px;
+  height: 20px;
+}
+
+.settings-tab.active {
+  color: #ffffff;
+}
+
+.settings-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #ffffff;
+}
+
+.settings-close-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  outline: none;
+}
+
+@media (hover: hover) {
+  .settings-close-btn:hover {
+    color: #ffffff;
+  }
+}
+
+.settings-close-btn .icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* List area (bg #262626) */
+.settings-list {
+  background: #262626;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  max-height: 200px;
+  scrollbar-width: thin;
+  scrollbar-color: #ffffff transparent;
+}
+
+.settings-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.settings-list::-webkit-scrollbar-thumb {
+  background: #ffffff;
+  border-radius: 2px;
+}
+
+.settings-panel {
+  display: none;
+  flex-direction: column;
+}
+
+.settings-panel.active {
+  display: flex;
+}
+
+.settings-panel button,
+.speed-option,
+.quality-option,
+.caption-option {
   background: transparent;
   border: none;
   color: #ffffff;
-  height: 30px;
-  padding: 0 8px;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 500;
+  height: 40px;
+  font-size: 15px;
+  font-weight: 400;
+  padding-left: 32px;
+  padding-right: 16px;
   cursor: pointer;
   text-align: left;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  position: relative;
+  width: 100%;
   transition: background var(--transition-fast);
 }
 
 @media (hover: hover) {
-  .speed-option:hover {
-    background: rgba(255, 255, 255, 0.12);
+  .settings-panel button:hover,
+  .speed-option:hover,
+  .quality-option:hover,
+  .caption-option:hover {
+    background: rgba(255, 255, 255, 0.08);
   }
 }
 
-.speed-option.active {
+.settings-panel button.active,
+.speed-option.active,
+.quality-option.active,
+.caption-option.active {
+  font-weight: 700;
+  background: transparent;
+}
+
+.settings-panel button.active::before,
+.speed-option.active::before,
+.quality-option.active::before,
+.caption-option.active::before {
+  content: '•';
+  position: absolute;
+  left: 14px;
+  font-size: 16px;
   color: #ffffff;
-  font-weight: 600;
-  background: rgba(255, 255, 255, 0.12);
 }
 
 .speed-option.active::after {
-  content: '•';
-  margin-left: 4px;
-  font-size: 0.9rem;
+  content: none;
 }
 
-/* Keyboard hints footer: tiny muted text, no bordered badge boxes (kbd gets a subtle 1px border only). */
+/* Keyboard hints footer */
 .footer {
   display: flex;
   justify-content: flex-start;
@@ -653,42 +776,61 @@ kbd {
 }
 
 /* Container Queries for Responsive Layout */
-@container player (max-width: 520px) {
-  :root, .video-container {
-    --center-size: 48px;
-  }
-  .volume-slider-wrapper {
-    display: none !important;
-  }
-  .controls-bar {
-    padding: 6px 10px 8px;
-  }
-  .control-btn {
-    width: 34px;
-    height: 34px;
-    min-width: 34px;
-  }
-  .speed-menu {
-    right: 10px;
+@container player (min-width: 640px) {
+  #pip-btn {
+    display: flex !important;
   }
 }
 
-@container player (max-width: 420px) {
+@container player (max-width: 639px) {
   #pip-btn {
     display: none !important;
   }
 }
 
-@container player (max-width: 340px) {
+@container player (max-width: 520px) {
   :root, .video-container {
-    --center-size: 40px;
+    --center-size: 56px;
   }
-  .time-separator, #duration-time {
-    display: none;
+  .volume-slider-wrapper {
+    display: none !important;
+  }
+  .controls-bar {
+    padding: 0 12px 6px;
+  }
+  .control-btn {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+  }
+  .control-btn .icon {
+    width: 24px;
+    height: 24px;
+  }
+  .settings-menu, .speed-menu {
+    right: 12px;
   }
 }
 
-/* Remove radius/aspect-ratio in fullscreen */
+@container player (max-width: 340px) {
+  :root, .video-container {
+    --center-size: 44px;
+  }
+  .control-btn {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+  }
+  .control-btn .icon {
+    width: 22px;
+    height: 22px;
+  }
+  .time-separator, #duration-time {
+    display: none !important;
+  }
+}
+
+/* Fullscreen handling */
 .video-container:fullscreen,
 .video-container:-webkit-full-screen {
   border-radius: 0 !important;
@@ -698,7 +840,7 @@ kbd {
   box-shadow: none !important;
 }
 
-/* Keep prefers-reduced-motion support, BUT do not kill the spinner: it must keep rotating (slow 1.6s linear) */
+/* Keep prefers-reduced-motion support without killing spinner rotation */
 @media (prefers-reduced-motion: reduce) {
   *:not(.spinner-ring) {
     animation-iteration-count: 1 !important;

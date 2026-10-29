@@ -1,5 +1,5 @@
 /**
- * Aura Player - Apple Liquid Glass Custom HTML5 Video Player Logic
+ * Aura Player - Custom HTML5 Video Player Logic (JW Player 8+ Restyle)
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -12,11 +12,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // Buttons
   const playPauseBtn = document.getElementById('play-pause-btn');
   const centralPlayBtn = document.getElementById('central-play-btn');
+  const rewindBtn = document.getElementById('rewind-btn');
+  const forwardBtn = document.getElementById('forward-btn');
   const muteBtn = document.getElementById('mute-btn');
   const speedBtn = document.getElementById('speed-btn');
   const speedMenu = document.getElementById('speed-menu');
+  const settingsCloseBtn = document.getElementById('settings-close-btn');
   const pipBtn = document.getElementById('pip-btn');
   const fullscreenBtn = document.getElementById('fullscreen-btn');
+
+  // Settings Tabs & Panels
+  const tabBtns = document.querySelectorAll('.settings-tab');
+  const settingsPanels = document.querySelectorAll('.settings-panel');
+  const captionsPanel = document.querySelector('.settings-panel[data-panel="captions"]');
 
   // Icons & Indicators
   const playIcons = document.querySelectorAll('.play-icon');
@@ -69,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Loading state debounce timer
   let loadingDebounceTimeout = null;
 
-  // --- BUG 1: ResizeObserver Observing Container and Controls Bar ---
+  // --- updateCenterSize ---
   const updateCenterSize = () => {
     if (!container || !controlsBar) return;
 
@@ -77,14 +85,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const containerW = container.clientWidth || container.offsetWidth;
     const controlsH = controlsBar.offsetHeight;
 
-    // Compute bottomInset from computed styles or fallback based on container width
-    const computedBottom = parseFloat(window.getComputedStyle(controlsBar).bottom) || (containerW <= 520 ? 8 : 12);
+    // Compute bottomInset
+    const computedBottom = parseFloat(window.getComputedStyle(controlsBar).bottom) || (containerW <= 520 ? 6 : 8);
     const pillTop = containerH - controlsH - computedBottom;
-    const maxSize = 2 * (pillTop - containerH / 2 - 8);
 
-    let defaultSize = 64;
-    if (containerW <= 340) defaultSize = 40;
-    else if (containerW <= 520) defaultSize = 48;
+    // Center button can overlap bar gradient: add 24px tolerance in maxSize formula
+    const maxSize = 2 * (pillTop - containerH / 2 - 8) + 24;
+
+    let defaultSize = 72;
+    if (containerW <= 340) defaultSize = 44;
+    else if (containerW <= 520) defaultSize = 56;
 
     if (maxSize < 36) {
       container.classList.add('center-too-small');
@@ -94,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const clampedSize = Math.max(36, Math.min(defaultSize, maxSize));
     container.style.setProperty('--center-size', `${Math.round(clampedSize)}px`);
-    container.style.setProperty('--controls-h', `${Math.round(controlsH + computedBottom + 12)}px`);
+    container.style.setProperty('--controls-h', `${Math.round(controlsH + computedBottom)}px`);
   };
 
   if (window.ResizeObserver && container && controlsBar) {
@@ -108,11 +118,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Utility Functions ---
   const formatTime = (seconds) => {
     if (isNaN(seconds) || seconds === Infinity) return '00:00';
-    const mins = Math.floor(seconds / 60);
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
     const secs = Math.floor(seconds % 60);
-    const formattedMins = mins < 10 ? `0${mins}` : `${mins}`;
+
     const formattedSecs = secs < 10 ? `0${secs}` : `${secs}`;
-    return `${formattedMins}:${formattedSecs}`;
+
+    if (hrs > 0 || (video.duration && video.duration >= 3600)) {
+      const formattedMins = mins < 10 ? `0${mins}` : `${mins}`;
+      return `${hrs}:${formattedMins}:${formattedSecs}`;
+    } else {
+      const formattedMins = mins < 10 ? `0${mins}` : `${mins}`;
+      return `${formattedMins}:${formattedSecs}`;
+    }
   };
 
   const showActionFeedback = (text) => {
@@ -209,7 +227,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // --- BUG 2: Debounced updateLoading() ---
+  // --- Debounced updateLoading() ---
   const updateLoading = () => {
     const isError = !errorState.classList.contains('hidden');
     const isPausedOrEnded = video.paused || video.ended || isError;
@@ -426,36 +444,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // --- BUG 3: Compact Speed Menu Toggle & Overflow Handling ---
+  // --- Settings Menu & Tab Handling ---
+  const switchTab = (tabName) => {
+    tabBtns.forEach(btn => {
+      const match = btn.dataset.tab === tabName;
+      btn.classList.toggle('active', match);
+    });
+
+    settingsPanels.forEach(panel => {
+      const match = panel.dataset.panel === tabName;
+      panel.classList.toggle('active', match);
+    });
+  };
+
   const toggleSpeedMenu = (open) => {
     isSpeedMenuOpen = typeof open === 'boolean' ? open : speedMenu.classList.contains('hidden');
 
     if (isSpeedMenuOpen) {
-      speedMenu.classList.remove('two-col');
+      switchTab('speed');
       speedMenu.classList.remove('hidden');
       speedBtn.setAttribute('aria-expanded', 'true');
       setControlsVisible(true);
 
-      // Check for vertical overflow
-      if (speedMenu.scrollHeight > speedMenu.clientHeight) {
-        speedMenu.classList.add('two-col');
-      }
-
-      // Scroll active item into view
       const activeOption = speedMenu.querySelector('.speed-option.active');
       if (activeOption) {
         activeOption.scrollIntoView({ block: 'nearest' });
       }
     } else {
       speedMenu.classList.add('hidden');
-      speedMenu.classList.remove('two-col');
       speedBtn.setAttribute('aria-expanded', 'false');
     }
   };
 
   const setPlaybackSpeed = (speed, persist = true, showToast = true) => {
     video.playbackRate = speed;
-    speedBtn.textContent = speed === 1.0 ? '1x' : `${speed}x`;
+
+    // Do NOT set speedBtn.textContent = ... (it wipes the gear SVG)
+    speedBtn.setAttribute('title', `Settings (speed ${speed}x)`);
+    speedBtn.setAttribute('aria-label', `Settings (speed ${speed}x)`);
 
     document.querySelectorAll('.speed-option').forEach(opt => {
       const match = parseFloat(opt.dataset.speed) === speed;
@@ -471,6 +497,52 @@ document.addEventListener('DOMContentLoaded', () => {
     if (persist) {
       localStorage.setItem(STORAGE_KEY_SPEED, speed.toString());
     }
+  };
+
+  // --- Captions Logic ---
+  const populateCaptions = () => {
+    if (!captionsPanel) return;
+
+    // Clear existing dynamic tracks except "Off"
+    const existingOptions = captionsPanel.querySelectorAll('.caption-option:not([data-track="off"])');
+    existingOptions.forEach(opt => opt.remove());
+
+    const tracks = Array.from(video.textTracks || []).filter(t => t.kind === 'subtitles' || t.kind === 'captions');
+
+    tracks.forEach((track, idx) => {
+      const btn = document.createElement('button');
+      btn.className = 'caption-option';
+      btn.dataset.track = idx.toString();
+      btn.textContent = track.label || track.language || `Track ${idx + 1}`;
+
+      if (track.mode === 'showing') {
+        btn.classList.add('active');
+        const offBtn = captionsPanel.querySelector('[data-track="off"]');
+        if (offBtn) offBtn.classList.remove('active');
+      }
+
+      captionsPanel.appendChild(btn);
+    });
+  };
+
+  const selectCaption = (trackValue) => {
+    const tracks = Array.from(video.textTracks || []).filter(t => t.kind === 'subtitles' || t.kind === 'captions');
+
+    if (trackValue === 'off') {
+      tracks.forEach(t => t.mode = 'disabled');
+    } else {
+      const idx = parseInt(trackValue, 10);
+      tracks.forEach((t, i) => {
+        t.mode = i === idx ? 'showing' : 'disabled';
+      });
+    }
+
+    captionsPanel.querySelectorAll('.caption-option').forEach(opt => {
+      const match = opt.dataset.track === trackValue;
+      opt.classList.toggle('active', match);
+    });
+
+    toggleSpeedMenu(false);
   };
 
   // --- Video Event Listeners ---
@@ -513,6 +585,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (savedMute !== null) video.muted = savedMute === 'true';
     if (savedSpeed !== null) setPlaybackSpeed(parseFloat(savedSpeed), false, false);
 
+    populateCaptions();
     updateVolumeUI();
     updateProgress();
     updateCenterSize();
@@ -533,10 +606,52 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   playPauseBtn.addEventListener('click', togglePlay);
+
+  if (rewindBtn) {
+    rewindBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      video.currentTime = Math.max(0, video.currentTime - 10);
+      showActionFeedback('-10s');
+    });
+  }
+
+  if (forwardBtn) {
+    forwardBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      video.currentTime = Math.min(video.duration || 0, video.currentTime + 10);
+      showActionFeedback('+10s');
+    });
+  }
+
   muteBtn.addEventListener('click', toggleMute);
   volumeSlider.addEventListener('input', (e) => {
     handleVolumeChange(parseFloat(e.target.value));
   });
+
+  // Tab switching inside settings menu
+  tabBtns.forEach(tab => {
+    tab.addEventListener('click', (e) => {
+      e.stopPropagation();
+      switchTab(tab.dataset.tab);
+    });
+  });
+
+  if (settingsCloseBtn) {
+    settingsCloseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleSpeedMenu(false);
+    });
+  }
+
+  if (captionsPanel) {
+    captionsPanel.addEventListener('click', (e) => {
+      const option = e.target.closest('.caption-option');
+      if (option) {
+        e.stopPropagation();
+        selectCaption(option.dataset.track);
+      }
+    });
+  }
 
   container.addEventListener('pointerdown', (e) => {
     lastPointerType = e.pointerType;
@@ -672,7 +787,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.addEventListener('click', (e) => {
-    if (!speedMenu.contains(e.target) && e.target !== speedBtn) {
+    if (!speedMenu.contains(e.target) && e.target !== speedBtn && !speedBtn.contains(e.target)) {
       toggleSpeedMenu(false);
     }
   });
