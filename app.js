@@ -503,6 +503,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const initMetadata = () => {
     durationTimeEl.textContent = formatTime(video.duration);
+    timelineContainer.setAttribute('aria-valuemax', '100');
 
     const savedVol = localStorage.getItem(STORAGE_KEY_VOLUME);
     const savedMute = localStorage.getItem(STORAGE_KEY_MUTED);
@@ -518,10 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   video.addEventListener('loadedmetadata', initMetadata);
-  video.addEventListener('durationchange', () => {
-    durationTimeEl.textContent = formatTime(video.duration);
-    updateProgress();
-  });
+  video.addEventListener('durationchange', initMetadata);
 
   if (video.readyState >= 1) {
     initMetadata();

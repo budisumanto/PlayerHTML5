@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Aura Player</title>
+  <title>Aura Player - Minimal Flat Video Player</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="page-container">
     <header class="header">
       <h1 class="title">Aura Player</h1>
-      <p class="subtitle">Minimal flat HTML5 video player</p>
+      <p class="subtitle">Custom HTML5 Video Player • Minimal Flat Design</p>
     </header>
 
     <main class="player-wrapper">
@@ -71,7 +71,7 @@
           </div>
         </div>
 
-        <!-- Playback Speed Menu (Positioned relative to player container, upward) -->
+        <!-- Playback Speed Menu -->
         <div class="speed-menu hidden" id="speed-menu" role="menu" aria-label="Playback Speed">
           <button class="speed-option" data-speed="0.5" role="menuitemradio" aria-checked="false">0.5x</button>
           <button class="speed-option" data-speed="0.75" role="menuitemradio" aria-checked="false">0.75x</button>
@@ -81,7 +81,7 @@
           <button class="speed-option" data-speed="2.0" role="menuitemradio" aria-checked="false">2x</button>
         </div>
 
-        <!-- Floating Glass Capsule / Pill Controls Bar -->
+        <!-- Flush Bottom Controls Bar -->
         <div class="controls-bar" id="controls-bar">
           <!-- Timeline / Progress Bar -->
           <div class="timeline-container" id="timeline-container" role="slider" tabindex="0" aria-label="Seek timeline" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="00:00">
